@@ -268,8 +268,13 @@ onMounted(loadAll);
 
     <a-spin :spinning="loading">
       <div ref="boardRef" class="board-scroll" :style="{ height: `${boardHeight}px` }">
-        <div v-for="status in TASK_STATUS_ORDER" :key="status" class="column">
-          <div class="column-head" :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }">
+        <div
+          v-for="status in TASK_STATUS_ORDER"
+          :key="status"
+          class="column"
+          :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }"
+        >
+          <div class="column-head">
             <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
             <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
             <span class="column-count num">{{ columns[status].length }}</span>
@@ -386,14 +391,19 @@ onMounted(loadAll);
   white-space: nowrap;
 }
 
-/* 列自适应铺满：列少时均分宽度，列多时收到 268px 再横向滚动 */
+/* 列自适应铺满：列少时均分宽度，列多时收到 268px 再横向滚动。
+   状态色放在列框自身的上边框上——放在列头里会因父级 1px 边框而左右各内缩 1px，
+   色条就压不到列的外沿，圆角处还会出现内外两层轮廓。
+   overflow: hidden 让列头的底色被列的圆角裁掉，四角与色条完全对齐。 */
 .column {
   flex: 1 1 0;
   min-width: 268px;
   max-width: 420px;
   background: #fafafa;
   border: 1px solid var(--tk-line);
+  border-top: 3px solid var(--tk-ink-4);
   border-radius: 8px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -404,8 +414,6 @@ onMounted(loadAll);
   align-items: center;
   gap: 7px;
   padding: 10px 12px;
-  border-top: 3px solid var(--tk-ink-4);
-  border-radius: 8px 8px 0 0;
   background: #f5f5f5;
   flex: none;
 }
