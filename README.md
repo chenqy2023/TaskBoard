@@ -67,12 +67,16 @@ npm run dev                 # http://localhost:5173
 ## 测试
 
 ```bash
-cd backend && npm run test          # 单元测试：进度汇总 / 状态与进度联动 / 权限规则 / 导入校验
+cd backend && npm run test          # 51 项单元测试：进度汇总 / 状态与进度联动 / 权限规则 / 导入校验
 cd frontend && npm run typecheck    # 前端类型检查
 
 # 接口冒烟（需后端已启动）
-python scripts/api-smoke.py
-python scripts/api-smoke.py --keep  # 保留测试数据便于界面查看
+python scripts/api-smoke.py                      # 默认打 localhost:3000
+python scripts/api-smoke.py --base http://localhost:8080/api   # 也可直接打生产 nginx
+python scripts/api-smoke.py --keep               # 保留测试数据便于界面查看
+
+# 实时通道冒烟（验证 WebSocket 能穿过 nginx，不会被降级成轮询）
+cd frontend && node scripts/ws-smoke.mjs http://localhost:8080
 ```
 
 接口文档：后端启动后访问 `/api/docs`（Swagger）。

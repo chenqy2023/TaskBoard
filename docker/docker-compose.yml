@@ -80,9 +80,10 @@ services:
       - internal
 
 volumes:
-  # 固定卷名，不随 compose 项目名变化，避免重建时数据"消失"
+  # 固定卷名，不随 compose 项目名变化，避免重建时数据"消失"。
+  # 想在同一台机器上再起一套（例如灰度环境）时，用 PG_VOLUME_NAME 错开即可。
   pg_data:
-    name: test_kanban_pg_data
+    name: ${PG_VOLUME_NAME:-test_kanban_pg_data}
 
 networks:
   internal:
