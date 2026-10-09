@@ -18,7 +18,7 @@ import {
 import VersionTabs from '@/components/VersionTabs.vue';
 import FilterBar from '@/components/FilterBar.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
-import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue';
+import TaskDetailModal from '@/components/TaskDetailModal.vue';
 import ImportModal from '@/components/ImportModal.vue';
 
 const route = useRoute();
@@ -346,7 +346,7 @@ onMounted(load);
       @saved="load"
     />
 
-    <TaskDetailDrawer v-model:open="detailOpen" :task="detailTask" @edit="openEdit" @changed="load" />
+    <TaskDetailModal v-model:open="detailOpen" :task="detailTask" @edit="openEdit" @changed="load" />
 
     <ImportModal
       v-model:open="importOpen"

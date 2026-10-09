@@ -49,7 +49,7 @@ npm run dev                 # http://localhost:5173
 ├─ frontend/           Vue3 + Vite + Ant Design Vue
 │  ├─ src/api          接口封装（axios 实例统一处理 401 与错误提示）
 │  ├─ src/views        登录、版本列表、看板、任务列表、统计、我的待办、成员管理
-│  ├─ src/components   看板卡片、任务表单、详情抽屉、筛选项、导入弹窗等
+│  ├─ src/components   看板卡片、任务表单、任务详情弹窗、筛选项、导入弹窗等
 │  └─ Dockerfile nginx.conf
 ├─ docker/
 │  ├─ docker-compose.yml       生产：nginx + api + postgres

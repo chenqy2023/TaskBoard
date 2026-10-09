@@ -16,7 +16,7 @@ import {
   priorityColor,
   progressColor,
 } from '@/utils/labels';
-import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue';
+import TaskDetailModal from '@/components/TaskDetailModal.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
 
 const router = useRouter();
@@ -146,7 +146,7 @@ onMounted(load);
       </a-card>
     </a-spin>
 
-    <TaskDetailDrawer v-model:open="detailOpen" :task="detailTask" @changed="load" @edit="(task) => { editingTask = task; formOpen = true; }" />
+    <TaskDetailModal v-model:open="detailOpen" :task="detailTask" @changed="load" @edit="(task) => { editingTask = task; formOpen = true; }" />
     <TaskFormModal
       v-model:open="formOpen"
       :version-id="editingTask?.versionId ?? ''"
