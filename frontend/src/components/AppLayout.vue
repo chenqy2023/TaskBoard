@@ -95,15 +95,17 @@ async function submitPassword() {
 
     <a-layout>
       <a-layout-header class="app-header">
-        <div class="header-left">
-          <component
-            :is="collapsed ? MenuUnfoldOutlined : MenuFoldOutlined"
-            class="collapse-trigger"
-            @click="collapsed = !collapsed"
-          />
-          <span class="header-title">{{ route.meta.title }}</span>
-        </div>
-        <div class="header-right">
+        <!-- 顶栏底色通栏，内容按同一内容区上限居中，保证用户名与页面右边缘对齐 -->
+        <div class="header-inner">
+          <div class="header-left">
+            <component
+              :is="collapsed ? MenuUnfoldOutlined : MenuFoldOutlined"
+              class="collapse-trigger"
+              @click="collapsed = !collapsed"
+            />
+            <span class="header-title">{{ route.meta.title }}</span>
+          </div>
+          <div class="header-right">
           <a-dropdown>
             <a class="user-chip" @click.prevent>
               <UserOutlined />
@@ -123,6 +125,7 @@ async function submitPassword() {
               </a-menu>
             </template>
           </a-dropdown>
+          </div>
         </div>
       </a-layout-header>
 
@@ -185,14 +188,22 @@ async function submitPassword() {
 }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   background: #fff;
-  padding: 0 20px;
+  padding: 0;
   height: 56px;
   line-height: 56px;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+}
+
+.header-inner {
+  max-width: var(--tk-content-max);
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .header-left {

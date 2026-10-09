@@ -27,6 +27,10 @@
   --tk-status-blocked: #ff4d4f;
   --tk-status-done: #52c41a;
 
+  /* 内容区最大宽度：超宽屏下居中收窄，避免表格被拉成一片空气、
+     也避免看板列数与内容宽度对不上（改这一个值即可整体调整） */
+  --tk-content-max: 1800px;
+
   /* 数字字形：等宽让百分比、日期、编号各列对齐，中文仍走系统字体 */
   --tk-num: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono',
     ui-monospace, monospace;
@@ -62,6 +66,8 @@ body {
 
 .page {
   padding: 16px 20px 32px;
+  max-width: var(--tk-content-max);
+  margin: 0 auto;
 }
 
 .page-header {

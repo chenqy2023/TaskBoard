@@ -391,14 +391,15 @@ onMounted(loadAll);
   white-space: nowrap;
 }
 
-/* 列自适应铺满：列少时均分宽度，列多时收到 268px 再横向滚动。
+/* 列自适应铺满：四列等分内容区宽度，容器不够时收到 268px 再横向滚动。
+   这里不设 max-width——上限由 .page 的 --tk-content-max 统一控制，
+   否则宽屏下四列顶到各自上限、右侧会留下一段对不齐的空白。
    状态色放在列框自身的上边框上——放在列头里会因父级 1px 边框而左右各内缩 1px，
    色条就压不到列的外沿，圆角处还会出现内外两层轮廓。
    overflow: hidden 让列头的底色被列的圆角裁掉，四角与色条完全对齐。 */
 .column {
   flex: 1 1 0;
   min-width: 268px;
-  max-width: 420px;
   background: #fafafa;
   border: 1px solid var(--tk-line);
   border-top: 3px solid var(--tk-ink-4);
