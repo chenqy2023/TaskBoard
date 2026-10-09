@@ -27,9 +27,28 @@
   --tk-status-blocked: #ff4d4f;
   --tk-status-done: #52c41a;
 
+  /* 顶栏高度：看板页算可用高度时要减掉它，提出来避免两处各写一遍 */
+  --tk-header-h: 56px;
+
   /* 内容区最大宽度：超宽屏下居中收窄，避免表格被拉成一片空气、
      也避免看板列数与内容宽度对不上（改这一个值即可整体调整） */
   --tk-content-max: 1800px;
+
+  /* 形状与阴影。之前这些值散在 10 个文件里硬编码，统一收在这里 */
+  --tk-radius-sm: 6px;   /* 卡片、徽章、输入框 */
+  --tk-radius-md: 10px;  /* 列面板、卡片容器 */
+  --tk-radius-pill: 999px;
+
+  --tk-shadow-card: 0 1px 3px rgba(9, 30, 66, 0.12), 0 0 1px rgba(9, 30, 66, 0.12);
+  --tk-shadow-card-hover: 0 4px 10px rgba(9, 30, 66, 0.16);
+  --tk-shadow-panel: 0 6px 16px rgba(9, 30, 66, 0.16);
+  --tk-shadow-header: 0 1px 4px rgba(0, 21, 41, 0.08);
+
+  /* 看板画布：看板页是一块浮起的渐变板面，列是上面的白色面板。
+     觉得太跳就改这一个值（例如换成浅色渐变），或整块去掉 */
+  --tk-canvas: linear-gradient(135deg, #18202a 0%, #2a3d50 46%, #44698c 100%);
+  --tk-panel: #f7f8fa;
+  --tk-hairline: rgba(9, 30, 66, 0.08);
 
   /* 数字字形：等宽让百分比、日期、编号各列对齐，中文仍走系统字体 */
   --tk-num: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono',
@@ -112,14 +131,40 @@ body {
   font-family: var(--tk-num);
 }
 
-/* 看板横向滚动容器：高度由页面按视口实测注入，列靠 stretch 撑满 */
+/* 看板画布：整块渐变板面，高度由页面按视口实测注入 */
+.board-canvas {
+  background: var(--tk-canvas);
+  border-radius: var(--tk-radius-md);
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* 画布上的横向滚动轨道，列靠 stretch 撑满画布高度 */
 .board-scroll {
   display: flex;
   gap: 12px;
   align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 0;
+  height: 100%;
+}
+
+/* 深色画布上默认滚动条太抢眼，收细并调成半透明白 */
+.board-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.24);
+  border-radius: var(--tk-radius-pill);
+}
+
+.board-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 /* ---------- 状态计数 chip：既是读数也是快捷筛选入口 ---------- */
@@ -130,7 +175,7 @@ body {
   gap: 6px;
   padding: 3px 10px;
   border: 1px solid var(--tk-line-strong);
-  border-radius: 14px;
+  border-radius: var(--tk-radius-pill);
   background: #fff;
   font-size: 12px;
   color: var(--tk-ink-2);

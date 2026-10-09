@@ -79,19 +79,21 @@ const participantText = computed(() => props.task.participants.map((item) => ite
 
 <style scoped>
 .card {
-  background: var(--tk-surface);
-  border: 1px solid var(--tk-line);
+  background: #fff;
+  border: 1px solid var(--tk-hairline);
+  /* 左侧色条跟随优先级，是快速扫视时最直接的线索 */
   border-left: 3px solid var(--tk-ink-4);
-  border-radius: 6px;
+  border-radius: var(--tk-radius-sm);
+  box-shadow: var(--tk-shadow-card);
   padding: 10px 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--tk-line-strong);
+  box-shadow: var(--tk-shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .card-top {
@@ -120,11 +122,11 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
-  min-width: 34px;
-  padding: 0 6px;
+  min-width: 32px;
+  padding: 0 7px;
   text-align: center;
   border: 1px solid;
-  border-radius: 4px;
+  border-radius: var(--tk-radius-pill);
 }
 
 .card-who {

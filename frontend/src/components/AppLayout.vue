@@ -190,9 +190,9 @@ async function submitPassword() {
 .app-header {
   background: #fff;
   padding: 0;
-  height: 56px;
-  line-height: 56px;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  height: var(--tk-header-h);
+  line-height: var(--tk-header-h);
+  box-shadow: var(--tk-shadow-header);
 }
 
 .header-inner {

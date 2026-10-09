@@ -17,6 +17,14 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   DONE: 'success',
 };
 
+/** 看板列头的淡底色，比列面板稍深一点，让列头可辨识 */
+export const TASK_STATUS_TINTS: Record<TaskStatus, string> = {
+  TODO: '#e3e7ec',
+  IN_PROGRESS: '#dcebfd',
+  BLOCKED: '#fbe1e1',
+  DONE: '#dcf0dc',
+};
+
 /** 看板列头左侧的强调色 */
 export const TASK_STATUS_BAR_COLORS: Record<TaskStatus, string> = {
   TODO: '#8c8c8c',

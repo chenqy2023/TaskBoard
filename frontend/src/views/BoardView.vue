@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
@@ -12,6 +12,7 @@ import {
   TASK_STATUS_BAR_COLORS,
   TASK_STATUS_LABELS,
   TASK_STATUS_ORDER,
+  TASK_STATUS_TINTS,
 } from '@/utils/labels';
 import ProgressSummary from '@/components/ProgressSummary.vue';
 import VersionTabs from '@/components/VersionTabs.vue';
@@ -61,23 +62,10 @@ function toggleStatus(status?: TaskStatus) {
   filters.value = { ...filters.value, status };
 }
 
-/* ---------- 看板撑满可用高度：按容器实际位置算，不写死偏移量 ---------- */
-const boardRef = ref<HTMLElement>();
-const boardHeight = ref(480);
-
-function measure() {
-  const el = boardRef.value;
-  if (!el) return;
-  const top = el.getBoundingClientRect().top;
-  boardHeight.value = Math.max(300, window.innerHeight - top - 40);
-}
-
-onMounted(() => {
-  measure();
-  window.addEventListener('resize', measure);
-});
-
-onBeforeUnmount(() => window.removeEventListener('resize', measure));
+/* 看板高度交给 CSS：.page--board 是 100vh 的纵向 flex，画布 flex:1 自动吃掉剩余高度。
+   之前用 JS 按 innerHeight 算并监听 resize，问题是高度会停在旧值上——
+   视口变化不一定派发 resize，页面滚动后 getBoundingClientRect().top 也会算错。
+   纯 CSS 方案没有这些坑，任何重排都会自动跟上。 */
 
 async function loadAll() {
   const id = versionId.value;
@@ -100,8 +88,6 @@ async function loadAll() {
     if (detailTask.value) {
       detailTask.value = boardTasks.find((t) => t.id === detailTask.value!.id) ?? detailTask.value;
     }
-    await nextTick();
-    measure();
   } catch (error) {
     message.error(errorText(error, '加载看板失败'));
   } finally {
@@ -118,8 +104,6 @@ async function loadTasksAndSummary() {
   summary.value = summaryData;
   for (const status of TASK_STATUS_ORDER) columns[status] = [];
   for (const task of boardTasks) columns[task.status].push(task);
-  await nextTick();
-  measure();
 }
 
 const { connected } = useRealtime(() => versionId.value, async (event) => {
@@ -203,7 +187,7 @@ onMounted(loadAll);
 </script>
 
 <template>
-  <div class="page">
+  <div class="page page--board">
     <VersionTabs v-if="version" :version="version" />
 
     <a-card size="small" class="tk-surface" style="margin: 8px 0 12px">
@@ -266,50 +250,54 @@ onMounted(loadAll);
       </div>
     </div>
 
-    <a-spin :spinning="loading">
-      <div ref="boardRef" class="board-scroll" :style="{ height: `${boardHeight}px` }">
-        <div
-          v-for="status in TASK_STATUS_ORDER"
-          :key="status"
-          class="column"
-          :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }"
-        >
-          <div class="column-head">
-            <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
-            <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
-            <span class="column-count num">{{ columns[status].length }}</span>
-            <a-tooltip :title="`在「${TASK_STATUS_LABELS[status]}」新建任务`">
-              <a class="column-add" @click="openCreate(status)">
-                <PlusOutlined />
-              </a>
-            </a-tooltip>
-          </div>
-
-          <draggable
-            v-model="columns[status]"
-            :data-status="status"
-            group="tasks"
-            item-key="id"
-            class="column-body"
-            ghost-class="card-ghost"
-            :animation="150"
-            @start="onDragStart"
-            @end="onDragEnd"
+    <div class="board-zone">
+      <a-spin :spinning="loading">
+        <div class="board-canvas">
+        <div class="board-scroll">
+          <div
+            v-for="status in TASK_STATUS_ORDER"
+            :key="status"
+            class="column"
+            :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }"
           >
-            <template #item="{ element }">
-              <div>
-                <TaskCard :task="element" @open="openDetail" @edit="openEdit" />
-              </div>
-            </template>
-            <template #footer>
-              <div v-if="columns[status].length === 0" class="column-empty">
-                暂无任务，点右上角 + 或把卡片拖到这里
-              </div>
-            </template>
-          </draggable>
+            <div class="column-head" :style="{ background: TASK_STATUS_TINTS[status] }">
+              <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
+              <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
+              <span class="column-count num">{{ columns[status].length }}</span>
+              <a-tooltip :title="`在「${TASK_STATUS_LABELS[status]}」新建任务`">
+                <a class="column-add" @click="openCreate(status)">
+                  <PlusOutlined />
+                </a>
+              </a-tooltip>
+            </div>
+
+            <draggable
+              v-model="columns[status]"
+              :data-status="status"
+              group="tasks"
+              item-key="id"
+              class="column-body"
+              ghost-class="card-ghost"
+              :animation="150"
+              @start="onDragStart"
+              @end="onDragEnd"
+            >
+              <template #item="{ element }">
+                <div>
+                  <TaskCard :task="element" @open="openDetail" @edit="openEdit" />
+                </div>
+              </template>
+              <template #footer>
+                <div v-if="columns[status].length === 0" class="column-empty">
+                  暂无任务，点右上角 + 或把卡片拖到这里
+                </div>
+              </template>
+            </draggable>
+            </div>
+          </div>
         </div>
-      </div>
-    </a-spin>
+      </a-spin>
+    </div>
 
     <TaskFormModal
       v-model:open="formOpen"
@@ -337,6 +325,41 @@ onMounted(loadAll);
 </template>
 
 <style scoped>
+/* 看板页撑满视口：标题区/汇总卡/工具栏按内容高度，画布吃掉剩余高度。
+   纯 CSS，无需监听视口变化，重排后自动正确。 */
+.page--board {
+  display: flex;
+  flex-direction: column;
+  /* 必须给一个确定高度，flex:1 才有剩余空间可分。
+     减掉顶栏高度，否则会比内容区高出 56px 而多出一条页面滚动条。 */
+  height: calc(100vh - var(--tk-header-h));
+}
+
+.page--board > *:not(.board-zone) {
+  flex: none;
+}
+
+.board-zone {
+  flex: 1 1 auto;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* a-spin 不转发外部 class，且内部还套着两层，用 :deep 把弹性一路传下去，
+   否则画布拿不到剩余高度 */
+.board-zone :deep(.ant-spin-nested-loading),
+.board-zone :deep(.ant-spin-container) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-canvas {
+  flex: 1 1 auto;
+}
+
 .summary-row {
   display: flex;
   align-items: center;
@@ -391,19 +414,19 @@ onMounted(loadAll);
   white-space: nowrap;
 }
 
-/* 列自适应铺满：四列等分内容区宽度，容器不够时收到 268px 再横向滚动。
-   这里不设 max-width——上限由 .page 的 --tk-content-max 统一控制，
-   否则宽屏下四列顶到各自上限、右侧会留下一段对不齐的空白。
-   状态色放在列框自身的上边框上——放在列头里会因父级 1px 边框而左右各内缩 1px，
-   色条就压不到列的外沿，圆角处还会出现内外两层轮廓。
-   overflow: hidden 让列头的底色被列的圆角裁掉，四角与色条完全对齐。 */
+/* 列：画布上浮起的面板。四列等分内容区宽度，容器不够时收到 268px 再横向滚动。
+   不设 max-width——上限由 .page 的 --tk-content-max 统一控制。
+   状态色放在列框自身的上边框上，作为这一列的标识色（对应列头色带）；
+   放在列头里会因父级边框而左右各内缩 1px，色条压不到列外沿。
+   overflow: hidden 让列头的淡底被列的圆角裁掉，四角与色带完全对齐。 */
 .column {
   flex: 1 1 0;
   min-width: 268px;
-  background: #fafafa;
-  border: 1px solid var(--tk-line);
+  background: var(--tk-panel);
+  border: 0;
   border-top: 3px solid var(--tk-ink-4);
-  border-radius: 8px;
+  border-radius: var(--tk-radius-md);
+  box-shadow: var(--tk-shadow-panel);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -415,7 +438,7 @@ onMounted(loadAll);
   align-items: center;
   gap: 7px;
   padding: 10px 12px;
-  background: #f5f5f5;
+  background: var(--tk-line);
   flex: none;
 }
 
@@ -436,7 +459,7 @@ onMounted(loadAll);
 }
 
 .column-body {
-  padding: 8px;
+  padding: 8px 10px 10px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
@@ -447,8 +470,9 @@ onMounted(loadAll);
   color: var(--tk-ink-4);
   text-align: center;
   padding: 14px 6px;
-  border: 1px dashed var(--tk-line-strong);
-  border-radius: 6px;
+  border: 1px dashed rgba(9, 30, 66, 0.16);
+  border-radius: var(--tk-radius-sm);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 :deep(.card-ghost) {
