@@ -31,6 +31,14 @@
   --tk-status-blocked: #ff4d4f;
   --tk-status-done: #52c41a;
 
+  /* 应用外框色：顶栏与侧栏统一成这个深色，和看板画布同色系，
+     否则浅色顶栏压在深色画布上会像两个应用拼在一起 */
+  --tk-chrome: #22252a;
+
+  /* 看板带的最大宽度：超宽屏下居中限宽，避免列被拉得过宽、
+     也避免空白全堆在右侧 */
+  --tk-board-max: 1700px;
+
   /* 顶栏高度：看板页算可用高度时要减掉它，提出来避免两处各写一遍 */
   --tk-header-h: 56px;
 
@@ -82,6 +90,16 @@ body {
   /* 全局等宽数字：表格、进度、计数里的数字列对齐，避免逐行跳动 */
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
+}
+
+/* 侧栏与顶栏同色。Ant 的深色菜单默认是 #001529，与我们的外框色不一致，
+   这里统一掉（Ant 内部元素的优先级较高，用 !important 覆盖） */
+.ant-layout-sider {
+  background: var(--tk-chrome) !important;
+}
+
+.ant-menu.ant-menu-dark {
+  background: transparent !important;
 }
 
 /* ---------- 通用工具类 ---------- */

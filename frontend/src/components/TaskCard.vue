@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CalendarOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue';
+import { CalendarOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import type { TaskView } from '@/types';
-import { PRIORITY_LABELS, PRIORITY_TINTS, priorityColor, progressColor } from '@/utils/labels';
+import {
+  PRIORITY_LABELS,
+  avatarColor,
+  avatarInitial,
+  priorityColor,
+  progressColor,
+} from '@/utils/labels';
 
 const props = defineProps<{ task: TaskView }>();
 
@@ -19,12 +25,10 @@ const dueLabel = computed(() => {
   return date.year() === dayjs().year() ? date.format('MM-DD') : date.format('YYYY-MM-DD');
 });
 
-const dueTitle = computed(() => {
-  if (!props.task.plannedEndDate) return '未设计划结束日期';
-  return `计划结束日期：${props.task.plannedEndDate}${props.task.overdue ? '（已逾期）' : ''}`;
-});
+const assignee = computed(() => props.task.assignee);
 
-const participantText = computed(() => props.task.participants.map((item) => item.displayName).join('、'));
+/** 紧急/高用实色饱和胶囊，中/低用淡底——要色彩浓度，但不能整板都是实色块 */
+const isHot = computed(() => props.task.priority === 'P0' || props.task.priority === 'P1');
 </script>
 
 <template>
@@ -33,9 +37,10 @@ const participantText = computed(() => props.task.participants.map((item) => ite
       <span class="title" :class="{ done: task.status === 'DONE' }">{{ task.title }}</span>
       <span
         class="priority"
+        :class="{ solid: isHot }"
         :style="{
-          color: priorityColor(task.priority),
-          background: PRIORITY_TINTS[task.priority],
+          color: isHot ? '#fff' : priorityColor(task.priority),
+          background: isHot ? priorityColor(task.priority) : 'transparent',
           borderColor: priorityColor(task.priority),
         }"
       >
@@ -43,22 +48,37 @@ const participantText = computed(() => props.task.participants.map((item) => ite
       </span>
     </div>
 
-    <!-- 负责人与计划结束日期构成稳定的一行：谁是主责、何时到期，一眼可见 -->
-    <div class="card-who">
-      <span class="assignee">
-        <UserOutlined />
-        {{ task.assignee?.displayName ?? '未分配' }}
-      </span>
-      <span v-if="dueLabel" class="due" :class="{ overdue: task.overdue }" :title="dueTitle">
+    <div class="card-foot">
+      <span
+        v-if="dueLabel"
+        class="due"
+        :class="{ overdue: task.overdue }"
+        :title="`计划结束日期：${task.plannedEndDate}${task.overdue ? '（已逾期）' : ''}`"
+      >
         <CalendarOutlined />
         {{ dueLabel }}
-        <em v-if="task.overdue">逾期</em>
       </span>
-    </div>
+      <span v-else class="due muted">未排期</span>
 
-    <div v-if="task.participants.length" class="card-participants" :title="participantText">
-      <TeamOutlined />
-      参与 {{ participantText }}
+      <div class="members">
+        <span v-if="assignee" class="who" :title="`负责人：${assignee.displayName}`">
+          <span class="avatar" :style="{ background: avatarColor(assignee.displayName) }">
+            {{ avatarInitial(assignee.displayName) }}
+          </span>
+          <span class="who-name">{{ assignee.displayName }}</span>
+        </span>
+        <span v-else class="who muted" title="未分配负责人">未分配</span>
+
+        <span
+          v-for="person in task.participants"
+          :key="person.id"
+          class="avatar avatar-sm"
+          :style="{ background: avatarColor(person.displayName) }"
+          :title="`参与：${person.displayName}`"
+        >
+          {{ avatarInitial(person.displayName) }}
+        </span>
+      </div>
     </div>
 
     <div class="card-progress">
@@ -69,10 +89,6 @@ const participantText = computed(() => props.task.participants.map((item) => ite
         :show-info="false"
       />
       <span class="percent num">{{ task.progress }}%</span>
-    </div>
-
-    <div class="card-actions">
-      <a @click.stop="emit('edit', task)">编辑</a>
     </div>
   </div>
 </template>
@@ -85,7 +101,7 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   border-left: 3px solid var(--tk-ink-4);
   border-radius: var(--tk-radius-sm);
   box-shadow: var(--tk-shadow-card);
-  padding: 10px 12px;
+  padding: 10px 12px 8px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.15s;
@@ -106,7 +122,7 @@ const participantText = computed(() => props.task.participants.map((item) => ite
 .title {
   font-size: 13px;
   line-height: 20px;
-  font-weight: 500;
+  font-weight: 600;
   word-break: break-word;
 }
 
@@ -115,13 +131,11 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   text-decoration: line-through;
 }
 
-/** 优先级用带底色的徽章，和继承自卡片的左色条互为呼应。
-    文案是「紧急/高/中/低」，用 min-width 让单字与双字的徽章宽度一致。 */
 .priority {
   flex: none;
   font-size: 11px;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 17px;
   min-width: 32px;
   padding: 0 7px;
   text-align: center;
@@ -129,57 +143,100 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   border-radius: var(--tk-radius-pill);
 }
 
-.card-who {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 7px;
-  font-size: 12px;
+/* 实色胶囊由底色承担颜色，边框透明让边缘更干净 */
+.priority.solid {
+  border-color: transparent;
 }
 
-.assignee {
-  display: inline-flex;
+/* ---------- 底部：日期 + 头像 ---------- */
+
+.card-foot {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  color: var(--tk-ink-2);
-  font-weight: 500;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .due {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  margin-left: auto;
   flex: none;
-  color: var(--tk-ink-3);
-  font-family: var(--tk-num);
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 7px;
+  border-radius: var(--tk-radius-pill);
+  background: #f1f3f5;
+  color: var(--tk-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
 .due.overdue {
+  background: #fdecec;
   color: var(--tk-danger);
   font-weight: 600;
 }
 
-.due em {
-  font-style: normal;
-  margin-left: 2px;
+.due.muted {
+  background: transparent;
+  color: var(--tk-ink-4);
+  border: 1px dashed rgba(9, 30, 66, 0.16);
+  padding: 0 6px;
 }
 
-.card-participants {
+.members {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin-right: 2px;
+}
+
+.who-name {
   font-size: 12px;
-  color: var(--tk-ink-4);
-  white-space: nowrap;
+  color: var(--tk-ink-2);
+  max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.who.muted {
+  font-size: 12px;
+  color: var(--tk-ink-4);
+}
+
+/* 圆形字母头像：同一个人在任何地方都是同一个颜色（按姓名散列取色） */
+.avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 0 0 1.5px #fff;
+  user-select: none;
+}
+
+/* 参与人头像互相叠压，和负责人区分开 */
+.avatar-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  margin-left: -6px;
 }
 
 .card-progress {
@@ -199,19 +256,5 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   font-size: 12px;
   color: var(--tk-ink-3);
   flex: none;
-}
-
-.card-actions {
-  text-align: right;
-  font-size: 12px;
-  line-height: 18px;
-  margin-top: 2px;
-  /* 只用透明度切换，避免 hover 时卡片高度跳动 */
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.card:hover .card-actions {
-  opacity: 1;
 }
 </style>

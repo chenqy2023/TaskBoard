@@ -188,87 +188,88 @@ onMounted(loadAll);
 
 <template>
   <div class="page page--board">
-    <VersionTabs v-if="version" :version="version" />
+    <div class="board-canvas">
+      <!-- 控制区浮在画布上：版本信息 + 进度汇总 + 筛选工具，做成一条磨砂横条 -->
+      <div class="board-chrome">
+        <VersionTabs v-if="version" :version="version" />
 
-    <a-card size="small" class="tk-surface" style="margin: 8px 0 12px">
-      <div class="summary-row">
-        <ProgressSummary :summary="summary" />
+        <div class="summary-row">
+          <ProgressSummary :summary="summary" />
 
-        <div class="status-chips">
-          <span class="status-chip" :class="{ active: !filters.status }" @click="toggleStatus(undefined)">
-            全部
-            <b class="count num">{{ summary?.total ?? 0 }}</b>
-          </span>
-          <a-tooltip
-            v-for="chip in statusChips"
-            :key="chip.status"
-            :title="`只看「${chip.label}」的任务`"
-          >
-            <span
-              class="status-chip"
-              :class="{
-                active: filters.status === chip.status,
-                dim: chip.count === 0 && filters.status !== chip.status,
-              }"
-              @click="toggleStatus(filters.status === chip.status ? undefined : chip.status)"
-            >
-              <i class="dot" :style="{ background: chip.color }" />
-              {{ chip.label }}
-              <b class="count num">{{ chip.count }}</b>
+          <div class="status-chips">
+            <span class="status-chip" :class="{ active: !filters.status }" @click="toggleStatus(undefined)">
+              全部
+              <b class="count num">{{ summary?.total ?? 0 }}</b>
             </span>
-          </a-tooltip>
+            <a-tooltip
+              v-for="chip in statusChips"
+              :key="chip.status"
+              :title="`只看「${chip.label}」的任务`"
+            >
+              <span
+                class="status-chip"
+                :class="{
+                  active: filters.status === chip.status,
+                  dim: chip.count === 0 && filters.status !== chip.status,
+                }"
+                @click="toggleStatus(filters.status === chip.status ? undefined : chip.status)"
+              >
+                <i class="dot" :style="{ background: chip.color }" />
+                {{ chip.label }}
+                <b class="count num">{{ chip.count }}</b>
+              </span>
+            </a-tooltip>
+          </div>
+        </div>
+
+        <div class="toolbar board-toolbar">
+          <FilterBar v-model:filters="filters" :users="users" hide-status />
+          <div class="toolbar-right">
+            <a-tooltip :title="connected ? '他人改动会实时推送到这里' : '实时通道未连接，改动需手动刷新'">
+              <span class="sync-state" :class="{ on: connected }">
+                <i class="dot" />
+                {{ connected ? '实时同步中' : '实时未连接' }}
+              </span>
+            </a-tooltip>
+            <span class="text-muted count-hint">当前 {{ totalShown }} 个任务</span>
+            <a-button size="small" :loading="loading" @click="loadAll">
+              <ReloadOutlined />
+              刷新
+            </a-button>
+            <a-button size="small" @click="exportExcel">
+              <DownloadOutlined />
+              导出
+            </a-button>
+            <a-button size="small" @click="importOpen = true">
+              <UploadOutlined />
+              导入
+            </a-button>
+            <a-button type="primary" size="small" @click="openCreate('TODO')">
+              <PlusOutlined />
+              新建任务
+            </a-button>
+          </div>
         </div>
       </div>
-    </a-card>
 
-    <div class="toolbar board-toolbar">
-      <FilterBar v-model:filters="filters" :users="users" hide-status />
-      <div class="toolbar-right">
-        <a-tooltip :title="connected ? '他人改动会实时推送到这里' : '实时通道未连接，改动需手动刷新'">
-          <span class="sync-state" :class="{ on: connected }">
-            <i class="dot" />
-            {{ connected ? '实时同步中' : '实时未连接' }}
-          </span>
-        </a-tooltip>
-        <span class="text-muted count-hint">当前 {{ totalShown }} 个任务</span>
-        <a-button size="small" :loading="loading" @click="loadAll">
-          <ReloadOutlined />
-          刷新
-        </a-button>
-        <a-button size="small" @click="exportExcel">
-          <DownloadOutlined />
-          导出
-        </a-button>
-        <a-button size="small" @click="importOpen = true">
-          <UploadOutlined />
-          导入
-        </a-button>
-        <a-button type="primary" size="small" @click="openCreate('TODO')">
-          <PlusOutlined />
-          新建任务
-        </a-button>
-      </div>
-    </div>
-
-    <div class="board-zone">
-      <a-spin :spinning="loading">
-        <div class="board-canvas">
-        <div class="board-scroll">
+      <div class="board-strip">
+        <a-spin :spinning="loading">
+          <div class="board-scroll">
           <div
             v-for="status in TASK_STATUS_ORDER"
             :key="status"
             class="column"
             :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }"
           >
-            <div class="column-head" :style="{ background: TASK_STATUS_TINTS[status] }">
+            <div class="column-head">
               <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
               <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
-              <span class="column-count num">{{ columns[status].length }}</span>
-              <a-tooltip :title="`在「${TASK_STATUS_LABELS[status]}」新建任务`">
-                <a class="column-add" @click="openCreate(status)">
-                  <PlusOutlined />
-                </a>
-              </a-tooltip>
+              <span
+                class="column-count num"
+                :style="{ background: TASK_STATUS_TINTS[status], color: TASK_STATUS_BAR_COLORS[status] }"
+              >
+                {{ columns[status].length }}
+              </span>
             </div>
 
             <draggable
@@ -289,14 +290,20 @@ onMounted(loadAll);
               </template>
               <template #footer>
                 <div v-if="columns[status].length === 0" class="column-empty">
-                  暂无任务，点右上角 + 或把卡片拖到这里
+                  把卡片拖到这里
                 </div>
               </template>
             </draggable>
+
+            <!-- 底部「新建任务」行：比列头的小加号更显眼 -->
+            <button class="column-add-row" type="button" @click="openCreate(status)">
+              <PlusOutlined />
+              新建任务
+            </button>
             </div>
           </div>
-        </div>
-      </a-spin>
+        </a-spin>
+      </div>
     </div>
 
     <TaskFormModal
@@ -325,39 +332,39 @@ onMounted(loadAll);
 </template>
 
 <style scoped>
-/* 看板页撑满视口：标题区/汇总卡/工具栏按内容高度，画布吃掉剩余高度。
-   纯 CSS，无需监听视口变化，重排后自动正确。 */
+/* ===== 看板页 = 一整块工作区 =====
+   整页通栏铺渐变，控件磨砂浮在上面，列是高对比浮层。
+   高度用纯 CSS 撑满（page--board 给确定高度，画布 flex:1），不依赖任何 JS 测量。 */
 .page--board {
+  padding: 0;
+  max-width: none;
   display: flex;
   flex-direction: column;
-  /* 必须给一个确定高度，flex:1 才有剩余空间可分。
-     减掉顶栏高度，否则会比内容区高出 56px 而多出一条页面滚动条。 */
   height: calc(100vh - var(--tk-header-h));
-}
-
-.page--board > *:not(.board-zone) {
-  flex: none;
-}
-
-.board-zone {
-  flex: 1 1 auto;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* a-spin 不转发外部 class，且内部还套着两层，用 :deep 把弹性一路传下去，
-   否则画布拿不到剩余高度 */
-.board-zone :deep(.ant-spin-nested-loading),
-.board-zone :deep(.ant-spin-container) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
 .board-canvas {
   flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 20px;
+  background: var(--tk-canvas);
+  overflow: hidden;
+}
+
+/* 控制条：半透明白 + 背景模糊，落在渐变上仍保持文字可读 */
+.board-chrome {
+  flex: none;
+  width: 100%;
+  max-width: var(--tk-board-max);
+  margin: 0 auto;
+  padding: 10px 14px 12px;
+  border-radius: var(--tk-radius-md);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(8, 20, 32, 0.24);
 }
 
 .summary-row {
@@ -377,7 +384,7 @@ onMounted(loadAll);
 
 .board-toolbar {
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-top: 10px;
 }
 
 .toolbar-right {
@@ -414,52 +421,94 @@ onMounted(loadAll);
   white-space: nowrap;
 }
 
-/* 列：画布上浮起的面板。四列等分内容区宽度，容器不够时收到 268px 再横向滚动。
-   不设 max-width——上限由 .page 的 --tk-content-max 统一控制。
-   状态色放在列框自身的上边框上，作为这一列的标识色（对应列头色带）；
-   放在列头里会因父级边框而左右各内缩 1px，色条压不到列外沿。
-   overflow: hidden 让列头的淡底被列的圆角裁掉，四角与色带完全对齐。 */
+/* 看板带：占满剩余高度，横向滚动 */
+.board-strip {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-strip :deep(.ant-spin-nested-loading),
+.board-strip :deep(.ant-spin-container) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* 居中并限宽：超宽屏下左右对称地留出画布，而不是把空白全堆在右侧 */
+  width: 100%;
+  max-width: var(--tk-board-max);
+  margin: 0 auto;
+}
+
+.board-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.24);
+  border-radius: var(--tk-radius-pill);
+}
+
+.board-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ===== 列：画布上浮起的面板 ===== */
 .column {
   flex: 1 1 0;
-  min-width: 268px;
+  min-width: 272px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: var(--tk-panel);
-  border: 0;
   border-top: 3px solid var(--tk-ink-4);
   border-radius: var(--tk-radius-md);
   box-shadow: var(--tk-shadow-panel);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
 .column-head {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 12px;
-  background: var(--tk-line);
+  padding: 11px 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--tk-hairline);
   flex: none;
 }
 
 .column-title {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--tk-ink);
 }
 
 .column-count {
   font-size: 12px;
-  color: var(--tk-ink-3);
   font-weight: 600;
-}
-
-.column-add {
-  margin-left: auto;
-  font-size: 14px;
+  color: var(--tk-ink-3);
+  border-radius: var(--tk-radius-pill);
+  padding: 0 7px;
+  line-height: 18px;
 }
 
 .column-body {
-  padding: 8px 10px 10px;
+  padding: 8px 10px 4px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
@@ -473,6 +522,29 @@ onMounted(loadAll);
   border: 1px dashed rgba(9, 30, 66, 0.16);
   border-radius: var(--tk-radius-sm);
   background: rgba(255, 255, 255, 0.56);
+}
+
+/* 列底部的「新建任务」行 */
+.column-add-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid var(--tk-hairline);
+  background: transparent;
+  color: var(--tk-ink-3);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.column-add-row:hover {
+  background: rgba(9, 30, 66, 0.05);
+  color: var(--tk-brand);
 }
 
 :deep(.card-ghost) {

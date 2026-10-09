@@ -164,7 +164,8 @@ const avgTone = computed(() => {
 .vp-bar {
   display: flex;
   flex: none;
-  width: 132px;
+  /* 收窄到 108px：宽度够时图例能一行放完，不至于把「已完成」挤到第二行 */
+  width: 108px;
   height: 8px;
   border-radius: var(--tk-radius-pill);
   overflow: hidden;

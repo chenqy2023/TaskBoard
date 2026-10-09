@@ -188,11 +188,12 @@ async function submitPassword() {
 }
 
 .app-header {
-  background: #fff;
+  background: var(--tk-chrome);
   padding: 0;
   height: var(--tk-header-h);
   line-height: var(--tk-header-h);
-  box-shadow: var(--tk-shadow-header);
+  /* 深色外框不用浅色阴影，用一条更深的分隔线更干净 */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
 }
 
 .header-inner {
@@ -215,17 +216,29 @@ async function submitPassword() {
 .collapse-trigger {
   font-size: 18px;
   cursor: pointer;
+  color: rgba(255, 255, 255, 0.78);
+  transition: color 0.15s;
+}
+
+.collapse-trigger:hover {
+  color: #fff;
 }
 
 .header-title {
   font-size: 16px;
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.94);
 }
 
 .user-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: rgba(0, 0, 0, 0.88);
+  color: rgba(255, 255, 255, 0.88);
+  transition: color 0.15s;
+}
+
+.user-chip:hover {
+  color: #fff;
 }
 </style>

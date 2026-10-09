@@ -18,6 +18,36 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 /**
+ * 头像底色的可选色板。用一个稳定的散列从姓名取色，
+ * 保证同一个人在所有页面、所有时间都是同一个颜色。
+ */
+const AVATAR_COLORS = [
+  '#1677ff',
+  '#13c2c2',
+  '#52c41a',
+  '#fa8c16',
+  '#eb2f96',
+  '#722ed1',
+  '#fa541c',
+  '#2f54eb',
+] as const;
+
+export function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) {
+    hash = (hash * 31 + name.charCodeAt(i)) % 9973;
+  }
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+/** 头像里的字：中文取姓氏首字，西文取首字母 */
+export function avatarInitial(name: string): string {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed) return '?';
+  return /[一-龥]/.test(trimmed) ? trimmed[0] : trimmed[0].toUpperCase();
+}
+
+/**
  * JS 侧需要取语义色时统一从这里拿（图表、分组标记等）。
  * CSS 侧的同一组值在 main.css 的 --tk-* 变量里，两处含义一致。
  */
