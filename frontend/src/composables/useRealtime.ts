@@ -9,12 +9,12 @@ export interface RealtimeEvent {
 }
 
 /**
- * 订阅某个版本的实时变更。
+ * 订阅某个项目的实时变更。
  * 收到任何事件只做一件事：让调用方重新拉取数据。
  * 不在这里做增量合并——服务端算出的进度/排序才是唯一事实来源，
  * 合并逻辑一旦和服务端口径不一致，看板就会显示错数。
  */
-export function useRealtime(versionId: () => string | undefined, onRefresh: (event: RealtimeEvent) => void) {
+export function useRealtime(projectId: () => string | undefined, onRefresh: (event: RealtimeEvent) => void) {
   const socket = ref<Socket | null>(null);
   const connected = ref(false);
   let debounceTimer: number | undefined;
@@ -40,8 +40,8 @@ export function useRealtime(versionId: () => string | undefined, onRefresh: (eve
 
     const base = import.meta.env.VITE_WS_URL || undefined;
     const instance = base
-      ? io(`${base}/ws`, { auth: { token: localStorage.getItem(TOKEN_KEY), versionId: id }, transports: ['websocket', 'polling'] })
-      : io('/ws', { auth: { token: localStorage.getItem(TOKEN_KEY), versionId: id }, transports: ['websocket', 'polling'] });
+      ? io(`${base}/ws`, { auth: { token: localStorage.getItem(TOKEN_KEY), projectId: id }, transports: ['websocket', 'polling'] })
+      : io('/ws', { auth: { token: localStorage.getItem(TOKEN_KEY), projectId: id }, transports: ['websocket', 'polling'] });
 
     instance.on('connect', () => {
       connected.value = true;
@@ -68,7 +68,7 @@ export function useRealtime(versionId: () => string | undefined, onRefresh: (eve
     connected.value = false;
   }
 
-  watch(versionId, (id) => connect(id), { immediate: true });
+  watch(projectId, (id) => connect(id), { immediate: true });
   onBeforeUnmount(disconnect);
 
   return { connected, disconnect };

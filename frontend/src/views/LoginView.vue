@@ -23,7 +23,7 @@ async function submit() {
     await auth.login(form.username.trim(), form.password);
     message.success('登录成功');
     const redirect = route.query.redirect as string | undefined;
-    await router.replace(redirect && redirect !== '/login' ? redirect : '/versions');
+    await router.replace(redirect && redirect !== '/login' ? redirect : '/projects');
   } catch (error) {
     message.error(errorText(error, '账号或密码错误'));
   } finally {
@@ -37,8 +37,8 @@ async function submit() {
     <div class="login-card">
       <div class="login-head">
         <div class="logo">TK</div>
-        <h1>测试任务看板</h1>
-        <p class="text-muted">版本测试进度与任务管理</p>
+        <h1>任务看板</h1>
+        <p class="text-muted">项目测试进度与任务管理</p>
       </div>
 
       <a-form layout="vertical" @submit.prevent="submit">

@@ -1,5 +1,5 @@
 export type Role = 'ADMIN' | 'MEMBER';
-export type VersionStatus = 'TESTING' | 'RELEASED' | 'ARCHIVED';
+export type ProjectStatus = 'ACTIVE' | 'DONE' | 'ARCHIVED';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
 export type Priority = 'P0' | 'P1' | 'P2' | 'P3';
 
@@ -13,7 +13,7 @@ export interface User {
   updatedAt?: string;
 }
 
-export interface VersionSummary {
+export interface ProjectSummary {
   total: number;
   done: number;
   avgProgress: number;
@@ -21,22 +21,22 @@ export interface VersionSummary {
   byStatus: Record<TaskStatus, number>;
 }
 
-export interface VersionView {
+export interface ProjectView {
   id: string;
   name: string;
   description: string | null;
-  status: VersionStatus;
-  testStartDate: string | null;
-  plannedReleaseDate: string | null;
+  status: ProjectStatus;
+  startDate: string | null;
+  endDate: string | null;
   createdBy: { id: string; displayName: string } | null;
   createdAt: string;
   updatedAt: string;
-  summary: VersionSummary;
+  summary: ProjectSummary;
 }
 
 export interface TaskView {
   id: string;
-  versionId: string;
+  projectId: string;
   title: string;
   description: string | null;
   assignee: { id: string; displayName: string } | null;
@@ -55,7 +55,7 @@ export interface TaskView {
   createdAt: string;
   updatedAt: string;
   /** 仅「我的待办」接口返回 */
-  version?: { id: string; name: string };
+  project?: { id: string; name: string };
   /** 仅「我的待办」接口返回：true 表示我是负责人，否则我是参与人 */
   isAssignee?: boolean;
 }
@@ -88,8 +88,8 @@ export interface BucketStats {
   completionRate: number;
 }
 
-export interface VersionStats {
-  summary: VersionSummary;
+export interface ProjectStats {
+  summary: ProjectSummary;
   byStatus: { status: TaskStatus; label: string; count: number }[];
   byPriority: { priority: Priority; label: string; count: number }[];
   byAssignee: BucketStats[];

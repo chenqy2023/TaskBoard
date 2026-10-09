@@ -44,8 +44,8 @@ export class CommentsService {
       return created;
     });
 
-    await this.realtime.emitToVersion(task.versionId, 'comment.created', {
-      versionId: task.versionId,
+    await this.realtime.emitToProject(task.projectId, 'comment.created', {
+      projectId: task.projectId,
       taskId,
       comment: toCommentView(comment),
       by: actor.displayName,
@@ -56,7 +56,7 @@ export class CommentsService {
   async remove(id: string, actor: AuthUser) {
     const comment = await this.prisma.comment.findUnique({
       where: { id },
-      include: { task: { select: { versionId: true } } },
+      include: { task: { select: { projectId: true } } },
     });
     if (!comment) throw new NotFoundException('评论不存在');
     // 只允许本人或管理员删除，避免互相改口供
@@ -65,8 +65,8 @@ export class CommentsService {
     }
 
     await this.prisma.comment.delete({ where: { id } });
-    await this.realtime.emitToVersion(comment.task.versionId, 'comment.deleted', {
-      versionId: comment.task.versionId,
+    await this.realtime.emitToProject(comment.task.projectId, 'comment.deleted', {
+      projectId: comment.task.projectId,
       taskId: comment.taskId,
       commentId: id,
       by: actor.displayName,
@@ -77,7 +77,7 @@ export class CommentsService {
   private async assertTaskExists(taskId: string) {
     const task = await this.prisma.task.findFirst({
       where: { id: taskId, deletedAt: null },
-      select: { id: true, versionId: true },
+      select: { id: true, projectId: true },
     });
     if (!task) throw new NotFoundException('任务不存在');
     return task;

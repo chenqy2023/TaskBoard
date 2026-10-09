@@ -165,7 +165,7 @@ onMounted(load);
       <div>
         <h2 class="page-title">成员管理</h2>
         <p class="page-subtitle">
-          共 {{ users.length }} 个账号，其中 {{ activeCount }} 个启用中。成员可管理任务，管理员还能管理版本与成员。
+          共 {{ users.length }} 个账号，其中 {{ activeCount }} 个启用中。成员可管理任务，管理员还能管理项目与成员。
         </p>
       </div>
       <div class="toolbar">
@@ -255,7 +255,7 @@ onMounted(load);
             <a-radio-button value="MEMBER">成员</a-radio-button>
             <a-radio-button value="ADMIN">管理员</a-radio-button>
           </a-radio-group>
-          <div class="text-muted hint">管理员可管理版本、成员和所有任务</div>
+          <div class="text-muted hint">管理员可管理项目、成员和所有任务</div>
         </a-form-item>
         <a-form-item v-if="!editing" label="初始密码" required>
           <a-input-password v-model:value="form.password" placeholder="至少 6 位，可让成员登录后自行修改" />

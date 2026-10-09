@@ -1,4 +1,4 @@
-import type { Priority, TaskStatus, VersionStatus } from '@/types';
+import type { Priority, TaskStatus, ProjectStatus } from '@/types';
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: '未开始',
@@ -18,8 +18,8 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 /**
- * 版本卡片封面的渐变。按版本号散列稳定取一个，
- * 同一个版本每次打开都是同一张封面，不会闪来闪去。
+ * 项目卡片封面的渐变。按项目名称散列稳定取一个，
+ * 同一个项目每次打开都是同一张封面，不会闪来闪去。
  */
 const COVER_GRADIENTS = [
   'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
@@ -122,15 +122,15 @@ export const PRIORITY_TINTS: Record<Priority, string> = {
 
 export const PRIORITY_ORDER: Priority[] = ['P0', 'P1', 'P2', 'P3'];
 
-export const VERSION_STATUS_LABELS: Record<VersionStatus, string> = {
-  TESTING: '测试中',
-  RELEASED: '已发布',
+export const VERSION_STATUS_LABELS: Record<ProjectStatus, string> = {
+  ACTIVE: '进行中',
+  DONE: '已完成',
   ARCHIVED: '已归档',
 };
 
-export const VERSION_STATUS_COLORS: Record<VersionStatus, string> = {
-  TESTING: 'processing',
-  RELEASED: 'success',
+export const VERSION_STATUS_COLORS: Record<ProjectStatus, string> = {
+  ACTIVE: 'processing',
+  DONE: 'success',
   ARCHIVED: 'default',
 };
 

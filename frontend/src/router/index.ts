@@ -12,27 +12,27 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('@/components/AppLayout.vue'),
     children: [
-      { path: '', redirect: '/versions' },
+      { path: '', redirect: '/projects' },
       {
-        path: 'versions',
-        name: 'versions',
-        component: () => import('@/views/VersionsView.vue'),
-        meta: { title: '版本管理' },
+        path: 'projects',
+        name: 'projects',
+        component: () => import('@/views/ProjectsView.vue'),
+        meta: { title: '项目管理' },
       },
       {
-        path: 'versions/:id/board',
+        path: 'projects/:id/board',
         name: 'board',
         component: () => import('@/views/BoardView.vue'),
         meta: { title: '看板' },
       },
       {
-        path: 'versions/:id/tasks',
+        path: 'projects/:id/tasks',
         name: 'task-list',
         component: () => import('@/views/TaskListView.vue'),
         meta: { title: '任务列表' },
       },
       {
-        path: 'versions/:id/stats',
+        path: 'projects/:id/stats',
         name: 'stats',
         component: () => import('@/views/StatsView.vue'),
         meta: { title: '统计' },
@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-  { path: '/:pathMatch(.*)*', redirect: '/versions' },
+  { path: '/:pathMatch(.*)*', redirect: '/projects' },
 ];
 
 export const router = createRouter({
@@ -75,12 +75,12 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.adminOnly && !auth.isAdmin) {
-    return { name: 'versions' };
+    return { name: 'projects' };
   }
   return true;
 });
 
 router.afterEach((to) => {
   const title = (to.meta.title as string | undefined) ?? '';
-  document.title = title ? `${title} · 测试任务看板` : '测试任务看板';
+  document.title = title ? `${title} · 任务看板` : '任务看板';
 });

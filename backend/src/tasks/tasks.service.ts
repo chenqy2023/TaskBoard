@@ -33,7 +33,7 @@ type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_INCLUDE }>
 
 export interface TaskView {
   id: string;
-  versionId: string;
+  projectId: string;
   title: string;
   description: string | null;
   assignee: { id: string; displayName: string } | null;
@@ -61,9 +61,9 @@ export class TasksService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  async findAll(versionId: string, query: QueryTaskDto) {
-    await this.assertVersionExists(versionId);
-    const where = this.buildWhere(versionId, query);
+  async findAll(projectId: string, query: QueryTaskDto) {
+    await this.assertProjectExists(projectId);
+    const where = this.buildWhere(projectId, query);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
@@ -86,11 +86,11 @@ export class TasksService {
     };
   }
 
-  /** 看板用：一次取回该版本全部任务，前端自己按列分组 */
-  async findBoard(versionId: string, query: QueryTaskDto) {
-    await this.assertVersionExists(versionId);
+  /** 看板用：一次取回该项目全部任务，前端自己按列分组 */
+  async findBoard(projectId: string, query: QueryTaskDto) {
+    await this.assertProjectExists(projectId);
     const tasks = await this.prisma.task.findMany({
-      where: this.buildWhere(versionId, query),
+      where: this.buildWhere(projectId, query),
       include: TASK_INCLUDE,
       orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
     });
@@ -107,13 +107,13 @@ export class TasksService {
   }
 
   async create(dto: CreateTaskDto, actor: AuthUser) {
-    await this.assertVersionExists(dto.versionId);
+    await this.assertProjectExists(dto.projectId);
     if (dto.assigneeId) await this.assertUserExists(dto.assigneeId);
     const participantIds = await this.resolveParticipantIds(dto.participantIds);
 
     const status = dto.status ?? TaskStatus.TODO;
     const aggregate = await this.prisma.task.aggregate({
-      where: { versionId: dto.versionId, status, deletedAt: null },
+      where: { projectId: dto.projectId, status, deletedAt: null },
       _max: { sortIndex: true },
     });
 
@@ -123,7 +123,7 @@ export class TasksService {
     const task = await this.prisma.$transaction(async (tx) => {
       const created = await tx.task.create({
         data: {
-          versionId: dto.versionId,
+          projectId: dto.projectId,
           title: dto.title.trim(),
           description: dto.description ?? null,
           assigneeId: dto.assigneeId ?? null,
@@ -276,7 +276,7 @@ export class TasksService {
     );
 
     const columnTasks = await this.prisma.task.findMany({
-      where: { versionId: current.versionId, status: dto.status, deletedAt: null },
+      where: { projectId: current.projectId, status: dto.status, deletedAt: null },
       select: { id: true },
       orderBy: [{ sortIndex: 'asc' }, { createdAt: 'asc' }],
     });
@@ -361,8 +361,8 @@ export class TasksService {
       updatedCount += 1;
     }
 
-    await this.realtime.emitToVersion(tasks[0].versionId, 'task.batch-updated', {
-      versionId: tasks[0].versionId,
+    await this.realtime.emitToProject(tasks[0].projectId, 'task.batch-updated', {
+      projectId: tasks[0].projectId,
       ids: tasks.map((t) => t.id),
       by: actor.displayName,
     });
@@ -388,8 +388,8 @@ export class TasksService {
       );
     });
 
-    await this.realtime.emitToVersion(task.versionId, 'task.deleted', {
-      versionId: task.versionId,
+    await this.realtime.emitToProject(task.projectId, 'task.deleted', {
+      projectId: task.projectId,
       taskId: id,
       by: actor.displayName,
     });
@@ -404,19 +404,19 @@ export class TasksService {
         status: { not: TaskStatus.DONE },
         OR: [{ assigneeId: actor.id }, { participants: { some: { id: actor.id } } }],
       },
-      include: { ...TASK_INCLUDE, version: { select: { id: true, name: true } } },
+      include: { ...TASK_INCLUDE, project: { select: { id: true, name: true } } },
       orderBy: [{ plannedEndDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
       take: limit,
     });
     return tasks.map((task) => ({
       ...toTaskView(task),
-      version: { id: task.version.id, name: task.version.name },
+      project: { id: task.project.id, name: task.project.name },
       isAssignee: task.assigneeId === actor.id,
     }));
   }
 
-  private buildWhere(versionId: string, query: QueryTaskDto): Prisma.TaskWhereInput {
-    const where: Prisma.TaskWhereInput = { versionId, deletedAt: null };
+  private buildWhere(projectId: string, query: QueryTaskDto): Prisma.TaskWhereInput {
+    const where: Prisma.TaskWhereInput = { projectId, deletedAt: null };
     if (query.status) where.status = query.status;
     if (query.priority) where.priority = query.priority;
     if (query.participantId) where.participants = { some: { id: query.participantId } };
@@ -456,12 +456,12 @@ export class TasksService {
     }
   }
 
-  private async assertVersionExists(versionId: string) {
-    const version = await this.prisma.version.findUnique({
-      where: { id: versionId },
+  private async assertProjectExists(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
       select: { id: true },
     });
-    if (!version) throw new NotFoundException('版本不存在');
+    if (!project) throw new NotFoundException('项目不存在');
   }
 
   private async assertUserExists(userId: string) {
@@ -505,8 +505,8 @@ export class TasksService {
   }
 
   private emit(actor: AuthUser, event: string, task: TaskWithRelations) {
-    return this.realtime.emitToVersion(task.versionId, event, {
-      versionId: task.versionId,
+    return this.realtime.emitToProject(task.projectId, event, {
+      projectId: task.projectId,
       task: toTaskView(task),
       by: actor.displayName,
     });
@@ -560,7 +560,7 @@ export function isOverdue(
 export function toTaskView(task: TaskWithRelations): TaskView {
   return {
     id: task.id,
-    versionId: task.versionId,
+    projectId: task.projectId,
     title: task.title,
     description: task.description,
     assignee: task.assignee ? { id: task.assignee.id, displayName: task.assignee.displayName } : null,

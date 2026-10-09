@@ -19,8 +19,8 @@ async function bootstrap() {
   app.useGlobalFilters(new PrismaExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('测试任务看板 API')
-    .setDescription('版本测试进度与任务管理')
+    .setTitle('任务看板 API')
+    .setDescription('项目测试进度与任务管理')
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();

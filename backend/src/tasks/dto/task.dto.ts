@@ -16,10 +16,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Priority, TaskStatus } from '@prisma/client';
 
 export class CreateTaskDto {
-  @ApiProperty({ description: '所属版本 id' })
+  @ApiProperty({ description: '所属项目 id' })
   @IsString()
-  @IsNotEmpty({ message: '缺少所属版本' })
-  versionId!: string;
+  @IsNotEmpty({ message: '缺少所属项目' })
+  projectId!: string;
 
   @ApiProperty({ example: '登录模块功能测试' })
   @IsString()

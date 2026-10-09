@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { message } from 'ant-design-vue';
 
-export const TOKEN_KEY = 'test-kanban-token';
+export const TOKEN_KEY = 'task-kanban-token';
 
 export const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',

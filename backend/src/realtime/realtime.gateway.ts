@@ -10,15 +10,15 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import { RealtimeService, versionRoom } from './realtime.service';
+import { RealtimeService, projectRoom } from './realtime.service';
 
 interface SocketAuth {
   token?: string;
-  versionId?: string;
+  projectId?: string;
 }
 
 /**
- * 实时通道：/ws 命名空间，按 versionId 进房间。
+ * 实时通道：/ws 命名空间，按 projectId 进房间。
  * 连接时校验 JWT；未认证的连接直接断开，避免看板数据被匿名订阅。
  */
 @WebSocketGateway({ namespace: '/ws', cors: { origin: true, credentials: true } })
@@ -51,19 +51,19 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       return;
     }
 
-    if (auth.versionId) void client.join(versionRoom(auth.versionId));
+    if (auth.projectId) void client.join(projectRoom(auth.projectId));
   }
 
   @SubscribeMessage('subscribe')
-  onSubscribe(@ConnectedSocket() client: Socket, @MessageBody() versionId: string) {
-    if (typeof versionId !== 'string' || !versionId) return { ok: false };
-    void client.join(versionRoom(versionId));
-    return { ok: true, room: versionRoom(versionId) };
+  onSubscribe(@ConnectedSocket() client: Socket, @MessageBody() projectId: string) {
+    if (typeof projectId !== 'string' || !projectId) return { ok: false };
+    void client.join(projectRoom(projectId));
+    return { ok: true, room: projectRoom(projectId) };
   }
 
   @SubscribeMessage('unsubscribe')
-  onUnsubscribe(@ConnectedSocket() client: Socket, @MessageBody() versionId: string) {
-    if (typeof versionId === 'string' && versionId) void client.leave(versionRoom(versionId));
+  onUnsubscribe(@ConnectedSocket() client: Socket, @MessageBody() projectId: string) {
+    if (typeof projectId === 'string' && projectId) void client.leave(projectRoom(projectId));
     return { ok: true };
   }
 }

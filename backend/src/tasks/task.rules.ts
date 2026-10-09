@@ -1,7 +1,7 @@
 import { ActivityAction, Priority, TaskStatus } from '@prisma/client';
 import { DATE_FIELDS, PROGRESS_LOG_THRESHOLD, type DateField } from '../common/constants';
 import { formatDateOnly } from '../common/date.util';
-import { clampProgress } from '../versions/version-summary';
+import { clampProgress } from '../projects/project-summary';
 import type { ActivityInput } from '../activities/activities.service';
 
 export interface ParticipantLike {

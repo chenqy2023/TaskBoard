@@ -8,7 +8,7 @@ import { taskIoApi } from '@/api';
 import { errorText } from '@/api/http';
 import { PRIORITY_LABELS, TASK_STATUS_LABELS } from '@/utils/labels';
 
-const props = defineProps<{ open: boolean; versionId: string; versionName: string }>();
+const props = defineProps<{ open: boolean; projectId: string; projectName: string }>();
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void;
   (e: 'imported'): void;
@@ -33,7 +33,7 @@ async function handleFile(file: FileType) {
   fileName.value = raw.name;
   parsing.value = true;
   try {
-    preview.value = await taskIoApi.preview(props.versionId, raw);
+    preview.value = await taskIoApi.preview(props.projectId, raw);
     if (preview.value.errorCount > 0) {
       message.warning(`有 ${preview.value.errorCount} 行存在问题，这些行不会被导入`);
     } else {
@@ -54,7 +54,7 @@ async function confirmImport() {
   const rows = preview.value.rows.filter((row) => row.parsed.errors.length === 0).map((row) => row.raw);
   importing.value = true;
   try {
-    const result = await taskIoApi.confirm(props.versionId, rows);
+    const result = await taskIoApi.confirm(props.projectId, rows);
     message.success(`已导入 ${result.createdCount} 个任务`);
     emit('imported');
     emit('update:open', false);
@@ -68,7 +68,7 @@ async function confirmImport() {
 
 async function downloadTemplate() {
   try {
-    await taskIoApi.download(props.versionId, `${props.versionName}-任务清单.xlsx`);
+    await taskIoApi.download(props.projectId, `${props.projectName}-任务清单.xlsx`);
     message.success('已下载当前任务清单，可据此整理后回传导入');
   } catch (error) {
     message.error(errorText(error, '下载失败'));

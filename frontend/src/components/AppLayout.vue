@@ -13,11 +13,11 @@ const auth = useAuthStore();
 
 /**
  * 导航直接在顶栏里，不再有左侧栏——
- * 首页是版本卡片墙，进到某个版本后再用版本内的页签切换看板/列表/统计。
+ * 首页是项目卡片墙，进到某个项目后再用项目内的页签切换看板/列表/统计。
  */
 const navItems = computed(() => {
   const items: { key: string; label: string; to: string; icon?: unknown }[] = [
-    { key: 'home', label: '版本', to: '/' },
+    { key: 'home', label: '项目', to: '/' },
     { key: 'my', label: '我的待办', to: '/my', icon: HeartOutlined },
   ];
   if (auth.isAdmin) {
@@ -79,10 +79,10 @@ async function submitPassword() {
   <div class="app-shell">
     <header class="app-header">
       <div class="header-inner">
-        <!-- 点品牌名回首页（版本卡片墙），替代原来侧栏的「版本管理」入口 -->
+        <!-- 点品牌名回首页（项目卡片墙），替代原来侧栏的「项目管理」入口 -->
         <router-link to="/" class="brand">
           <span class="brand-mark">TK</span>
-          <span class="brand-text">测试任务看板</span>
+          <span class="brand-text">任务看板</span>
         </router-link>
 
         <nav class="header-nav">
@@ -200,7 +200,7 @@ async function submitPassword() {
   color: rgba(255, 255, 255, 0.94);
 }
 
-/* 顶栏导航：版本 / 我的待办 / 成员管理 */
+/* 顶栏导航：项目 / 我的待办 / 成员管理 */
 .header-nav {
   display: flex;
   align-items: center;

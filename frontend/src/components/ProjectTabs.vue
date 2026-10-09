@@ -3,10 +3,10 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { CalendarOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
-import type { VersionView } from '@/types';
+import type { ProjectView } from '@/types';
 import { VERSION_STATUS_COLORS, VERSION_STATUS_LABELS } from '@/utils/labels';
 
-const props = defineProps<{ version: VersionView }>();
+const props = defineProps<{ project: ProjectView }>();
 const route = useRoute();
 const router = useRouter();
 
@@ -18,12 +18,12 @@ const activeKey = computed(() => {
 });
 
 function go(key: string) {
-  router.push({ name: key === 'board' ? 'board' : key === 'tasks' ? 'task-list' : 'stats', params: { id: props.version.id } });
+  router.push({ name: key === 'board' ? 'board' : key === 'tasks' ? 'task-list' : 'stats', params: { id: props.project.id } });
 }
 
 const dateRange = computed(() => {
-  const start = props.version.testStartDate;
-  const end = props.version.plannedReleaseDate;
+  const start = props.project.startDate;
+  const end = props.project.endDate;
   if (!start && !end) return null;
   const fmt = (value: string | null) => (value ? dayjs(value).format('YYYY-MM-DD') : '待定');
   return `${fmt(start)} ~ ${fmt(end)}`;
@@ -31,13 +31,13 @@ const dateRange = computed(() => {
 </script>
 
 <template>
-  <div class="version-head">
-    <div class="version-title">
-      <router-link to="/versions" class="back">全部版本</router-link>
+  <div class="project-head">
+    <div class="project-title">
+      <router-link to="/projects" class="back">全部项目</router-link>
       <a-divider type="vertical" />
-      <span class="name">{{ version.name }}</span>
-      <a-tag :color="VERSION_STATUS_COLORS[version.status]">
-        {{ VERSION_STATUS_LABELS[version.status] }}
+      <span class="name">{{ project.name }}</span>
+      <a-tag :color="VERSION_STATUS_COLORS[project.status]">
+        {{ VERSION_STATUS_LABELS[project.status] }}
       </a-tag>
       <span v-if="dateRange" class="text-muted dates">
         <CalendarOutlined />
@@ -53,23 +53,23 @@ const dateRange = computed(() => {
 </template>
 
 <style scoped>
-.version-head {
+.project-head {
   margin-bottom: 4px;
 }
 
-.version-title {
+.project-title {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.version-title .name {
+.project-title .name {
   font-size: 20px;
   font-weight: 600;
 }
 
-.version-title .dates {
+.project-title .dates {
   font-size: 12px;
   margin-left: 4px;
 }

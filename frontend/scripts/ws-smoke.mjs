@@ -50,13 +50,13 @@ if (!login.data?.accessToken) {
 const token = login.data.accessToken;
 console.log(`实时通道冒烟 -> ${base}\n`);
 
-const versionName = `WS-SMOKE-${Date.now()}`;
-const created = await call('POST', '/versions', token, { name: versionName });
-const versionId = created.data?.id;
-check('建立测试版本', !!versionId, `状态 ${created.status}`);
+const projectName = `WS-SMOKE-${Date.now()}`;
+const created = await call('POST', '/projects', token, { name: projectName });
+const projectId = created.data?.id;
+check('建立测试项目', !!projectId, `状态 ${created.status}`);
 
 const socket = io(`${base}/ws`, {
-  auth: { token, versionId },
+  auth: { token, projectId },
   transports: ['websocket'],
   reconnection: false,
   timeout: 8000,
@@ -78,11 +78,11 @@ check('WebSocket 握手成功（未降级为轮询）', connected, `实际 trans
 check('传输协议确实是 websocket', socket.io?.engine?.transport?.name === 'websocket');
 
 // 服务端广播需要房间，显式订阅一次更稳
-socket.emit('subscribe', versionId);
+socket.emit('subscribe', projectId);
 await new Promise((r) => setTimeout(r, 500));
 
 const taskCreated = await call('POST', '/tasks', token, {
-  versionId,
+  projectId,
   title: '实时同步验证任务',
   priority: 'P1',
   plannedEndDate: '2026-10-31',
@@ -125,7 +125,7 @@ check('收到 task.moved 推送', !!gotMoved);
 check('拖到已完成进度为 100', gotMoved?.payload?.task?.progress === 100, `实际 ${gotMoved?.payload?.task?.progress}`);
 
 socket.disconnect();
-await call('DELETE', `/versions/${versionId}?force=true`, token);
+await call('DELETE', `/projects/${projectId}?force=true`, token);
 
 const failed = results.filter((item) => !item.ok);
 console.log(`\n结果：通过 ${results.length - failed.length} 项，失败 ${failed.length} 项`);

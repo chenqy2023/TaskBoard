@@ -5,7 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { VersionsModule } from './versions/versions.module';
+import { ProjectsModule } from './projects/projects.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { ActivitiesModule } from './activities/activities.module';
@@ -21,7 +21,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     RealtimeModule,
     AuthModule,
     UsersModule,
-    VersionsModule,
+    ProjectsModule,
     TasksModule,
     CommentsModule,
     ActivitiesModule,

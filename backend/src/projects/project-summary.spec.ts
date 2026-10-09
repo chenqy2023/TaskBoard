@@ -1,7 +1,7 @@
 import { TaskStatus } from '@prisma/client';
-import { summarizeFromAggregates, summarizeTasks } from './version-summary';
+import { summarizeFromAggregates, summarizeTasks } from './project-summary';
 
-describe('版本进度汇总口径', () => {
+describe('项目进度汇总口径', () => {
   it('平均进度取算术平均并四舍五入为整数', () => {
     const summary = summarizeTasks([
       { status: TaskStatus.TODO, progress: 60 },
@@ -16,7 +16,7 @@ describe('版本进度汇总口径', () => {
     expect(summary.completionRate).toBe(33.3);
   });
 
-  it('空版本不出现除零，返回全 0', () => {
+  it('空项目不出现除零，返回全 0', () => {
     const summary = summarizeTasks([]);
 
     expect(summary).toEqual({

@@ -1,7 +1,7 @@
 import { TaskStatus } from '@prisma/client';
 import { TASK_STATUS_ORDER } from '../common/constants';
 
-export interface VersionSummary {
+export interface ProjectSummary {
   /** 未删除任务总数 */
   total: number;
   /** 已完成任务数 */
@@ -33,11 +33,11 @@ function round1(value: number): number {
 }
 
 /**
- * 版本进度口径（已与需求方确认）：
+ * 项目进度口径（已与需求方确认）：
  *   - 平均进度 = 所有未删除任务 progress 的算术平均，四舍五入为整数
  *   - 完成率   = 已完成任务数 / 总任务数，保留 1 位小数
  */
-export function summarizeTasks(tasks: TaskLike[]): VersionSummary {
+export function summarizeTasks(tasks: TaskLike[]): ProjectSummary {
   const byStatus = emptyStatusCount();
   let progressSum = 0;
 
@@ -58,12 +58,12 @@ export function summarizeTasks(tasks: TaskLike[]): VersionSummary {
   };
 }
 
-/** 列表页用聚合结果构造，避免把每个版本的任务全查出来 */
+/** 列表页用聚合结果构造，避免把每个项目的任务全查出来 */
 export function summarizeFromAggregates(input: {
   total: number;
   progressSum: number;
   byStatus: Partial<Record<TaskStatus, number>>;
-}): VersionSummary {
+}): ProjectSummary {
   const byStatus = emptyStatusCount();
   for (const status of TASK_STATUS_ORDER) {
     byStatus[status] = input.byStatus[status] ?? 0;

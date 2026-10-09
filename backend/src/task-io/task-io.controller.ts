@@ -20,14 +20,14 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 @ApiTags('导入导出')
 @ApiBearerAuth()
-@Controller('versions/:versionId')
+@Controller('projects/:projectId')
 export class TaskIoController {
   constructor(private readonly taskIoService: TaskIoService) {}
 
   @Get('export')
-  @ApiOperation({ summary: '导出该版本任务为 xlsx' })
-  async export(@Param('versionId') versionId: string, @Res() res: Response) {
-    const { buffer, filename } = await this.taskIoService.buildExport(versionId);
+  @ApiOperation({ summary: '导出该项目任务为 xlsx' })
+  async export(@Param('projectId') projectId: string, @Res() res: Response) {
+    const { buffer, filename } = await this.taskIoService.buildExport(projectId);
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -46,18 +46,18 @@ export class TaskIoController {
     schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
   })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }))
-  preview(@Param('versionId') versionId: string, @UploadedFile() file?: Express.Multer.File) {
+  preview(@Param('projectId') projectId: string, @UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('请选择要上传的 .xlsx 文件');
-    return this.taskIoService.previewImport(versionId, file.buffer);
+    return this.taskIoService.previewImport(projectId, file.buffer);
   }
 
   @Post('import/confirm')
   @ApiOperation({ summary: '确认导入预览通过的行' })
   confirm(
-    @Param('versionId') versionId: string,
+    @Param('projectId') projectId: string,
     @Body() dto: ImportConfirmDto,
     @CurrentUser() actor: AuthUser,
   ) {
-    return this.taskIoService.confirmImport(versionId, dto.rows, actor);
+    return this.taskIoService.confirmImport(projectId, dto.rows, actor);
   }
 }

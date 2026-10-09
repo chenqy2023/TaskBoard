@@ -1,7 +1,7 @@
 import { Priority, TaskStatus } from '@prisma/client';
 import { parsePriority, parseTaskStatus } from '../common/constants';
 import { formatDateOnly, toDateOnly } from '../common/date.util';
-import { clampProgress } from '../versions/version-summary';
+import { clampProgress } from '../projects/project-summary';
 
 export interface RawImportRow {
   rowNo: number;

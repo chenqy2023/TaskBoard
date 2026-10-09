@@ -9,7 +9,7 @@ import { PRIORITY_LABELS, PRIORITY_ORDER, TASK_STATUS_LABELS, TASK_STATUS_ORDER 
 
 const props = defineProps<{
   open: boolean;
-  versionId: string;
+  projectId: string;
   task: TaskView | null;
   users: User[];
   defaultStatus?: TaskStatus;
@@ -130,7 +130,7 @@ async function submit() {
 
     const saved = props.task
       ? await tasksApi.update(props.task.id, payload)
-      : await tasksApi.create({ ...payload, versionId: props.versionId });
+      : await tasksApi.create({ ...payload, projectId: props.projectId });
 
     message.success(props.task ? '任务已更新' : '任务已创建');
     emit('saved', saved);

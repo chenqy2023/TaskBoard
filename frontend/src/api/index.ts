@@ -10,10 +10,10 @@ import type {
   TaskStatus,
   TaskView,
   User,
-  VersionStats,
-  VersionStatus,
-  VersionSummary,
-  VersionView,
+  ProjectStats,
+  ProjectStatus,
+  ProjectSummary,
+  ProjectView,
 } from '@/types';
 
 // ---------- 认证 ----------
@@ -40,28 +40,28 @@ export const usersApi = {
   remove: (id: string) => http.delete(`/users/${id}`).then((r) => r.data),
 };
 
-// ---------- 版本 ----------
-export const versionsApi = {
-  list: (params?: { status?: VersionStatus; keyword?: string }) =>
-    http.get<VersionView[]>('/versions', { params }).then((r) => r.data),
-  get: (id: string) => http.get<VersionView>(`/versions/${id}`).then((r) => r.data),
-  summary: (id: string) => http.get<VersionSummary>(`/versions/${id}/summary`).then((r) => r.data),
+// ---------- 项目 ----------
+export const projectsApi = {
+  list: (params?: { status?: ProjectStatus; keyword?: string }) =>
+    http.get<ProjectView[]>('/projects', { params }).then((r) => r.data),
+  get: (id: string) => http.get<ProjectView>(`/projects/${id}`).then((r) => r.data),
+  summary: (id: string) => http.get<ProjectSummary>(`/projects/${id}/summary`).then((r) => r.data),
   create: (payload: Record<string, unknown>) =>
-    http.post<VersionView>('/versions', payload).then((r) => r.data),
+    http.post<ProjectView>('/projects', payload).then((r) => r.data),
   update: (id: string, payload: Record<string, unknown>) =>
-    http.patch<VersionView>(`/versions/${id}`, payload).then((r) => r.data),
+    http.patch<ProjectView>(`/projects/${id}`, payload).then((r) => r.data),
   remove: (id: string, force = false) =>
-    http.delete(`/versions/${id}`, { params: { force } }).then((r) => r.data),
+    http.delete(`/projects/${id}`, { params: { force } }).then((r) => r.data),
 };
 
 // ---------- 任务 ----------
 export const tasksApi = {
-  list: (versionId: string, params: TaskQuery) =>
+  list: (projectId: string, params: TaskQuery) =>
     http
-      .get<Paginated<TaskView>>(`/versions/${versionId}/tasks`, { params })
+      .get<Paginated<TaskView>>(`/projects/${projectId}/tasks`, { params })
       .then((r) => r.data),
-  board: (versionId: string, params?: TaskQuery) =>
-    http.get<TaskView[]>(`/versions/${versionId}/board`, { params }).then((r) => r.data),
+  board: (projectId: string, params?: TaskQuery) =>
+    http.get<TaskView[]>(`/projects/${projectId}/board`, { params }).then((r) => r.data),
   my: () => http.get<TaskView[]>('/tasks/my').then((r) => r.data),
   get: (id: string) => http.get<TaskView>(`/tasks/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) => http.post<TaskView>('/tasks', payload).then((r) => r.data),
@@ -85,15 +85,15 @@ export const commentsApi = {
 
 // ---------- 统计 ----------
 export const statsApi = {
-  byVersion: (versionId: string) =>
-    http.get<VersionStats>(`/stats/versions/${versionId}`).then((r) => r.data),
+  byProject: (projectId: string) =>
+    http.get<ProjectStats>(`/stats/projects/${projectId}`).then((r) => r.data),
 };
 
 // ---------- 导入导出 ----------
 export const taskIoApi = {
-  exportUrl: (versionId: string) => `${import.meta.env.VITE_API_BASE || '/api'}/versions/${versionId}/export`,
-  async download(versionId: string, filename: string) {
-    const response = await http.get(`/versions/${versionId}/export`, { responseType: 'blob' });
+  exportUrl: (projectId: string) => `${import.meta.env.VITE_API_BASE || '/api'}/projects/${projectId}/export`,
+  async download(projectId: string, filename: string) {
+    const response = await http.get(`/projects/${projectId}/export`, { responseType: 'blob' });
     const url = URL.createObjectURL(response.data as Blob);
     const link = document.createElement('a');
     link.href = url;
@@ -103,18 +103,18 @@ export const taskIoApi = {
     link.remove();
     URL.revokeObjectURL(url);
   },
-  preview: (versionId: string, file: File) => {
+  preview: (projectId: string, file: File) => {
     const form = new FormData();
     form.append('file', file);
     return http
-      .post<ImportPreview>(`/versions/${versionId}/import/preview`, form, {
+      .post<ImportPreview>(`/projects/${projectId}/import/preview`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 60000,
       })
       .then((r) => r.data);
   },
-  confirm: (versionId: string, rows: RawImportRow[] | ParsedImportRow[]) =>
+  confirm: (projectId: string, rows: RawImportRow[] | ParsedImportRow[]) =>
     http
-      .post<{ createdCount: number }>(`/versions/${versionId}/import/confirm`, { rows })
+      .post<{ createdCount: number }>(`/projects/${projectId}/import/confirm`, { rows })
       .then((r) => r.data),
 };

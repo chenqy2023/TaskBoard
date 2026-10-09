@@ -1,9 +1,9 @@
 {
-  "name": "test-kanban-frontend",
+  "name": "task-kanban-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "测试任务看板 - 前端 (Vue3 + Vite + Ant Design Vue)",
+  "description": "Task Kanban frontend (Vue 3 + Vite + Ant Design Vue)",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
@@ -31,5 +31,6 @@
     "typescript": "^5.8.2",
     "vite": "^6.2.4",
     "vue-tsc": "^2.2.8"
-  }
+  },
+  "license": "MIT"
 }

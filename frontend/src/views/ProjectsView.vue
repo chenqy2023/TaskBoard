@@ -10,8 +10,8 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons-vue';
-import type { VersionStatus, VersionView } from '@/types';
-import { versionsApi } from '@/api';
+import type { ProjectStatus, ProjectView } from '@/types';
+import { projectsApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -20,27 +20,27 @@ import {
   coverGradient,
   progressColor,
 } from '@/utils/labels';
-import VersionFormModal from '@/components/VersionFormModal.vue';
+import ProjectFormModal from '@/components/ProjectFormModal.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
 
-const versions = ref<VersionView[]>([]);
+const projects = ref<ProjectView[]>([]);
 const loading = ref(false);
-const filters = reactive<{ status?: VersionStatus; keyword: string }>({ keyword: '' });
+const filters = reactive<{ status?: ProjectStatus; keyword: string }>({ keyword: '' });
 
 const formOpen = ref(false);
-const editing = ref<VersionView | null>(null);
+const editing = ref<ProjectView | null>(null);
 
 async function load() {
   loading.value = true;
   try {
-    versions.value = await versionsApi.list({
+    projects.value = await projectsApi.list({
       status: filters.status,
       keyword: filters.keyword.trim() || undefined,
     });
   } catch (error) {
-    message.error(errorText(error, '加载版本列表失败'));
+    message.error(errorText(error, '加载项目列表失败'));
   } finally {
     loading.value = false;
   }
@@ -50,11 +50,11 @@ const filtering = computed(() => !!filters.status || !!filters.keyword.trim());
 
 /** 概览压成一行文字，不再占一整条——首页以卡片墙为主 */
 const overview = computed(() => {
-  const list = versions.value;
+  const list = projects.value;
   return {
     total: list.length,
-    testing: list.filter((item) => item.status === 'TESTING').length,
-    released: list.filter((item) => item.status === 'RELEASED').length,
+    testing: list.filter((item) => item.status === 'ACTIVE').length,
+    released: list.filter((item) => item.status === 'DONE').length,
     risky: list.filter((item) => (item.summary.byStatus?.BLOCKED ?? 0) > 0).length,
   };
 });
@@ -64,29 +64,29 @@ function openCreate() {
   formOpen.value = true;
 }
 
-function openEdit(version: VersionView) {
-  editing.value = version;
+function openEdit(project: ProjectView) {
+  editing.value = project;
   formOpen.value = true;
 }
 
-function openBoard(version: VersionView) {
-  router.push({ name: 'board', params: { id: version.id } });
+function openBoard(project: ProjectView) {
+  router.push({ name: 'board', params: { id: project.id } });
 }
 
-function remove(version: VersionView) {
+function remove(project: ProjectView) {
   Modal.confirm({
-    title: `删除版本 ${version.name}？`,
+    title: `删除项目 ${project.name}？`,
     content:
-      version.summary.total > 0
-        ? `该版本下有 ${version.summary.total} 个任务，删除会一并删除这些任务及其评论、日志，且不可恢复。`
-        : '该版本下没有任务。',
+      project.summary.total > 0
+        ? `该项目下有 ${project.summary.total} 个任务，删除会一并删除这些任务及其评论、日志，且不可恢复。`
+        : '该项目下没有任务。',
     okText: '确认删除',
     okType: 'danger',
     cancelText: '取消',
     async onOk() {
       try {
-        await versionsApi.remove(version.id, true);
-        message.success('版本已删除');
+        await projectsApi.remove(project.id, true);
+        message.success('项目已删除');
         await load();
       } catch (error) {
         message.error(errorText(error, '删除失败'));
@@ -103,11 +103,11 @@ onMounted(load);
     <div class="home-inner">
       <div class="home-head">
         <div>
-          <h2 class="home-title">版本</h2>
+          <h2 class="home-title">项目</h2>
           <p class="home-summary">
-            共 <b class="num">{{ overview.total }}</b> 个版本 ·
-            测试中 <b class="num">{{ overview.testing }}</b> ·
-            已发布 <b class="num">{{ overview.released }}</b> ·
+            共 <b class="num">{{ overview.total }}</b> 个项目 ·
+            进行中 <b class="num">{{ overview.testing }}</b> ·
+            已完成 <b class="num">{{ overview.released }}</b> ·
             <span :class="{ risky: overview.risky > 0 }">
               需关注 <b class="num">{{ overview.risky }}</b>
             </span>
@@ -118,7 +118,7 @@ onMounted(load);
         <div class="home-tools">
           <a-input
             v-model:value="filters.keyword"
-            placeholder="搜索版本号"
+            placeholder="搜索项目名称"
             allow-clear
             style="width: 190px"
             @press-enter="load"
@@ -127,7 +127,7 @@ onMounted(load);
           </a-input>
           <a-select
             v-model:value="filters.status"
-            placeholder="版本状态"
+            placeholder="项目状态"
             allow-clear
             style="width: 130px"
             :options="Object.entries(VERSION_STATUS_LABELS).map(([value, label]) => ({ value, label }))"
@@ -144,80 +144,80 @@ onMounted(load);
       <a-spin :spinning="loading">
         <div class="card-grid">
           <article
-            v-for="version in versions"
-            :key="version.id"
-            class="vcard"
-            @click="openBoard(version)"
+            v-for="project in projects"
+            :key="project.id"
+            class="pcard"
+            @click="openBoard(project)"
           >
-            <!-- 封面：按版本号稳定取一个渐变，版本名压在封面上 -->
-            <div class="vcard-cover" :style="{ background: coverGradient(version.name) }">
-              <span class="vcard-count num" :title="`${version.summary.total} 个任务`">
-                {{ version.summary.total }}
+            <!-- 封面：按项目名称稳定取一个渐变，项目名压在封面上 -->
+            <div class="pcard-cover" :style="{ background: coverGradient(project.name) }">
+              <span class="pcard-count num" :title="`${project.summary.total} 个任务`">
+                {{ project.summary.total }}
               </span>
-              <span class="vcard-name">{{ version.name }}</span>
+              <span class="pcard-name">{{ project.name }}</span>
 
               <a-dropdown v-if="auth.isAdmin" :trigger="['click']">
-                <button class="vcard-more" type="button" title="更多操作" @click.stop>
+                <button class="pcard-more" type="button" title="更多操作" @click.stop>
                   <MoreOutlined />
                 </button>
                 <template #overlay>
                   <a-menu>
-                    <a-menu-item key="edit" @click="openEdit(version)">
+                    <a-menu-item key="edit" @click="openEdit(project)">
                       <EditOutlined />
-                      <span style="margin-left: 6px">编辑版本</span>
+                      <span style="margin-left: 6px">编辑项目</span>
                     </a-menu-item>
-                    <a-menu-item key="delete" danger @click="remove(version)">
+                    <a-menu-item key="delete" danger @click="remove(project)">
                       <DeleteOutlined />
-                      <span style="margin-left: 6px">删除版本</span>
+                      <span style="margin-left: 6px">删除项目</span>
                     </a-menu-item>
                   </a-menu>
                 </template>
               </a-dropdown>
             </div>
 
-            <div class="vcard-body">
-              <div class="vcard-row">
-                <a-tag :color="VERSION_STATUS_COLORS[version.status]" class="vcard-status">
-                  {{ VERSION_STATUS_LABELS[version.status] }}
+            <div class="pcard-body">
+              <div class="pcard-row">
+                <a-tag :color="VERSION_STATUS_COLORS[project.status]" class="pcard-status">
+                  {{ VERSION_STATUS_LABELS[project.status] }}
                 </a-tag>
-                <span class="vcard-rate">
-                  完成率 <b class="num">{{ version.summary.completionRate }}%</b>
-                  <span class="text-muted num">（{{ version.summary.done }}/{{ version.summary.total }}）</span>
+                <span class="pcard-rate">
+                  完成率 <b class="num">{{ project.summary.completionRate }}%</b>
+                  <span class="text-muted num">（{{ project.summary.done }}/{{ project.summary.total }}）</span>
                 </span>
               </div>
 
-              <div class="vcard-progress">
+              <div class="pcard-progress">
                 <a-progress
-                  :percent="version.summary.avgProgress"
+                  :percent="project.summary.avgProgress"
                   size="small"
-                  :stroke-color="progressColor('IN_PROGRESS', version.summary.avgProgress)"
+                  :stroke-color="progressColor('IN_PROGRESS', project.summary.avgProgress)"
                   :show-info="false"
                 />
-                <span class="vcard-avg num">{{ version.summary.avgProgress }}%</span>
+                <span class="pcard-avg num">{{ project.summary.avgProgress }}%</span>
               </div>
 
-              <div class="vcard-dates num">
-                <span>{{ version.testStartDate ?? '待定' }}</span>
+              <div class="pcard-dates num">
+                <span>{{ project.startDate ?? '待定' }}</span>
                 <span class="sep">→</span>
-                <span>{{ version.plannedReleaseDate ?? '待定' }}</span>
+                <span>{{ project.endDate ?? '待定' }}</span>
               </div>
             </div>
           </article>
 
-          <!-- 建版本入口做成网格里的最后一张卡，和参考稿一致 -->
-          <button class="vcard vcard-new" type="button" @click="openCreate">
-            <span class="vcard-new-icon"><PlusOutlined /></span>
-            <span class="vcard-new-text">创建版本</span>
+          <!-- 建项目入口做成网格里的最后一张卡，和参考稿一致 -->
+          <button class="pcard pcard-new" type="button" @click="openCreate">
+            <span class="pcard-new-icon"><PlusOutlined /></span>
+            <span class="pcard-new-text">创建项目</span>
           </button>
         </div>
 
-        <div v-if="versions.length === 0 && !loading" class="home-empty">
-          {{ filtering ? '没有符合筛选条件的版本' : '还没有版本，点上面「创建版本」开始' }}
+        <div v-if="projects.length === 0 && !loading" class="home-empty">
+          {{ filtering ? '没有符合筛选条件的项目' : '还没有项目，点上面「创建项目」开始' }}
         </div>
       </a-spin>
     </div>
 
-    <VersionFormModal v-model:open="formOpen" :version="editing" @saved="load" />
+    <ProjectFormModal v-model:open="formOpen" :project="editing" @saved="load" />
   </div>
 </template>
 
@@ -286,7 +286,7 @@ onMounted(load);
   gap: 16px;
 }
 
-.vcard {
+.pcard {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -302,12 +302,12 @@ onMounted(load);
   transition: transform 0.16s, box-shadow 0.16s;
 }
 
-.vcard:hover {
+.pcard:hover {
   transform: translateY(-2px);
   box-shadow: var(--tk-shadow-card-hover);
 }
 
-.vcard-cover {
+.pcard-cover {
   position: relative;
   height: 96px;
   padding: 12px 14px;
@@ -315,8 +315,8 @@ onMounted(load);
   align-items: flex-end;
 }
 
-/* 自下而上的暗色蒙版：让白色版本名在任何一张渐变上都够清晰 */
-.vcard-cover::after {
+/* 自下而上的暗色蒙版：让白色项目名在任何一张渐变上都够清晰 */
+.pcard-cover::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -324,7 +324,7 @@ onMounted(load);
   pointer-events: none;
 }
 
-.vcard-name {
+.pcard-name {
   position: relative;
   z-index: 1;
   font-size: 17px;
@@ -336,7 +336,7 @@ onMounted(load);
 }
 
 /* 任务数徽章压在封面右上角 */
-.vcard-count {
+.pcard-count {
   position: absolute;
   z-index: 1;
   top: 10px;
@@ -353,7 +353,7 @@ onMounted(load);
 }
 
 /* 管理操作在悬停时才出现，平时不干扰看封面 */
-.vcard-more {
+.pcard-more {
   position: absolute;
   z-index: 1;
   top: 8px;
@@ -372,62 +372,62 @@ onMounted(load);
   transition: opacity 0.15s, background 0.15s;
 }
 
-.vcard:hover .vcard-more,
-.vcard-more:focus-visible {
+.pcard:hover .pcard-more,
+.pcard-more:focus-visible {
   opacity: 1;
 }
 
-.vcard-more:hover {
+.pcard-more:hover {
   background: rgba(0, 0, 0, 0.55);
 }
 
-.vcard-body {
+.pcard-body {
   padding: 10px 14px 12px;
 }
 
-.vcard-row {
+.pcard-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.vcard-status {
+.pcard-status {
   margin-inline-end: 0;
   flex: none;
 }
 
-.vcard-rate {
+.pcard-rate {
   font-size: 12px;
   color: var(--tk-ink-2);
   white-space: nowrap;
 }
 
-.vcard-rate b {
+.pcard-rate b {
   color: var(--tk-ink);
   font-weight: 600;
 }
 
-.vcard-progress {
+.pcard-progress {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 8px;
 }
 
-.vcard-progress :deep(.ant-progress) {
+.pcard-progress :deep(.ant-progress) {
   flex: 1;
   margin: 0;
   min-width: 0;
 }
 
-.vcard-avg {
+.pcard-avg {
   font-size: 12px;
   color: var(--tk-ink-3);
   flex: none;
 }
 
-.vcard-dates {
+.pcard-dates {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -436,12 +436,12 @@ onMounted(load);
   color: var(--tk-ink-2);
 }
 
-.vcard-dates .sep {
+.pcard-dates .sep {
   color: var(--tk-ink-4);
 }
 
-/* 末尾的「创建版本」卡 */
-.vcard-new {
+/* 末尾的「创建项目」卡 */
+.pcard-new {
   min-height: 178px;
   align-items: center;
   justify-content: center;
@@ -452,13 +452,13 @@ onMounted(load);
   color: var(--tk-ink-2);
 }
 
-.vcard-new:hover {
+.pcard-new:hover {
   background: #fff;
   border-color: var(--tk-brand);
   color: var(--tk-brand);
 }
 
-.vcard-new-icon {
+.pcard-new-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -470,7 +470,7 @@ onMounted(load);
   opacity: 0.8;
 }
 
-.vcard-new-text {
+.pcard-new-text {
   font-size: 14px;
   font-weight: 600;
 }

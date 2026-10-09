@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-测试任务看板 —— 接口冒烟测试。
+任务看板 —— 接口冒烟测试。
 
 用途：部署或改完代码后，一条命令确认核心链路没被打断。
     python scripts/api-smoke.py
-    python scripts/api-smoke.py --base http://10.0.0.5:8080/api
+    python scripts/api-smoke.py --base http://192.0.2.10:8080/api
 
-只依赖标准库。脚本会自己建一个临时版本和临时成员，结束时清理干净，
+只依赖标准库。脚本会自己建一个临时项目和临时成员，结束时清理干净，
 不会污染现有数据（--keep 可保留，便于在界面上翻看）。
 """
 
@@ -22,7 +22,7 @@ ADMIN_USER = "admin"
 ADMIN_PASSWORD = "Admin@123456"
 MEMBER_USER = "smoke_member"
 MEMBER_PASSWORD = "Smoke@123456"
-VERSION_NAME = "SMOKE-自动测试"
+PROJECT_NAME = "SMOKE-自动测试"
 
 PASSED = []
 FAILED = []
@@ -100,10 +100,10 @@ def check(name, condition, detail=""):
 
 
 def find_version(base, token, name):
-    _, versions = call(base, "GET", "/versions", token=token)
-    for version in versions or []:
-        if version["name"] == name:
-            return version["id"]
+    _, projects = call(base, "GET", "/projects", token=token)
+    for project in projects or []:
+        if project["name"] == name:
+            return project["id"]
     return None
 
 
@@ -124,38 +124,38 @@ def main():
         print("\n登录失败，后续用例无法继续。请确认账号密码与是否已执行 seed。")
         return 1
 
-    status, _ = call(base, "GET", "/versions")
+    status, _ = call(base, "GET", "/projects")
     check("未带 token 被拒 (401)", status == 401, f"实际 {status}")
 
     _, me = call(base, "GET", "/auth/me", token=token)
     check("GET /auth/me 返回本人", (me or {}).get("username") == ADMIN_USER)
 
-    # ---------- 2. 版本 ----------
-    print("\n2) 版本")
-    stale = find_version(base, token, VERSION_NAME)
+    # ---------- 2. 项目 ----------
+    print("\n2) 项目")
+    stale = find_version(base, token, PROJECT_NAME)
     if stale:
-        call(base, "DELETE", f"/versions/{stale}?force=true", token=token)
+        call(base, "DELETE", f"/projects/{stale}?force=true", token=token)
 
-    _, version = call(
+    _, project = call(
         base,
         "POST",
-        "/versions",
+        "/projects",
         token=token,
         body={
-            "name": VERSION_NAME,
+            "name": PROJECT_NAME,
             "description": "冒烟测试专用，可随时删除",
-            "testStartDate": "2026-10-01",
-            "plannedReleaseDate": "2026-10-30",
+            "startDate": "2026-10-01",
+            "endDate": "2026-10-30",
         },
         expect=201,
     )
-    vid = version["id"]
-    check("新版本默认 TESTING", version.get("status") == "TESTING")
-    check("日期字段按 YYYY-MM-DD 返回", version.get("testStartDate") == "2026-10-01", f"实际 {version.get('testStartDate')}")
-    check("新版本汇总为空", version.get("summary", {}).get("total") == 0)
+    vid = project["id"]
+    check("新项目默认 ACTIVE", project.get("status") == "ACTIVE")
+    check("日期字段按 YYYY-MM-DD 返回", project.get("startDate") == "2026-10-01", f"实际 {project.get('startDate')}")
+    check("新项目汇总为空", project.get("summary", {}).get("total") == 0)
 
-    status, _ = call(base, "POST", "/versions", token=token, body={"name": VERSION_NAME})
-    check("重复版本号被拒 (409)", status == 409, f"实际 {status}")
+    status, _ = call(base, "POST", "/projects", token=token, body={"name": PROJECT_NAME})
+    check("重复项目名称被拒 (409)", status == 409, f"实际 {status}")
 
     # ---------- 3. 成员 ----------
     print("\n3) 成员")
@@ -193,7 +193,7 @@ def main():
         {"title": "兼容性回归", "priority": "P3", "progress": 100, "plannedEndDate": "2026-10-30"},
     ]
     created = [
-        call(base, "POST", "/tasks", token=token, body={**spec, "versionId": vid}, expect=201)[1]
+        call(base, "POST", "/tasks", token=token, body={**spec, "projectId": vid}, expect=201)[1]
         for spec in specs
     ]
     check("中文标题原样落库", created[0]["title"] == "登录模块功能测试", f"实际 {created[0]['title']!r}")
@@ -219,20 +219,20 @@ def main():
 
     status, err = call(
         base, "POST", "/tasks", token=token,
-        body={"versionId": vid, "title": "进度非整数", "progress": 60.5},
+        body={"projectId": vid, "title": "进度非整数", "progress": 60.5},
     )
     check("进度拒绝非整数 (400)", status == 400, f"实际 {status} {err}")
 
     status, err = call(
         base, "POST", "/tasks", token=token,
-        body={"versionId": vid, "title": "进度越界", "progress": 101},
+        body={"projectId": vid, "title": "进度越界", "progress": 101},
     )
     check("进度拒绝越界值 (400)", status == 400, f"实际 {status} {err}")
 
-    _, filtered = call(base, "GET", f"/versions/{vid}/tasks?participantId={member['id']}", token=token)
+    _, filtered = call(base, "GET", f"/projects/{vid}/tasks?participantId={member['id']}", token=token)
     check("可按参与人筛选", filtered["total"] == 1, f"实际 {filtered['total']}")
 
-    _, summary = call(base, "GET", f"/versions/{vid}/summary", token=token)
+    _, summary = call(base, "GET", f"/projects/{vid}/summary", token=token)
     check("平均进度 = (60+30+100)/3 ≈ 63", summary["avgProgress"] == 63, f"实际 {summary['avgProgress']}")
     check("完成率初始为 0", summary["completionRate"] == 0)
     check("按状态计数正确", summary["byStatus"] == {"TODO": 3, "IN_PROGRESS": 0, "BLOCKED": 0, "DONE": 0}, f"实际 {summary['byStatus']}")
@@ -246,7 +246,7 @@ def main():
     check("拖到已完成自动置进度 100", moved["progress"] == 100, f"实际 {moved['progress']}")
     check("拖到已完成记录完成时间", bool(moved["completedAt"]))
 
-    _, summary2 = call(base, "GET", f"/versions/{vid}/summary", token=token)
+    _, summary2 = call(base, "GET", f"/projects/{vid}/summary", token=token)
     check("平均进度重算为 77", summary2["avgProgress"] == 77, f"实际 {summary2['avgProgress']}")
     check("完成率为 33.3%", summary2["completionRate"] == 33.3, f"实际 {summary2['completionRate']}")
 
@@ -280,7 +280,7 @@ def main():
     )
     check("成员不能建用户 (403)", status == 403, f"实际 {status}")
 
-    status, _ = call(base, "GET", f"/versions/{vid}/board", token=mtoken)
+    status, _ = call(base, "GET", f"/projects/{vid}/board", token=mtoken)
     check("成员可以看看板 (200)", status == 200, f"实际 {status}")
 
     # ---------- 7. 评论与日志 ----------
@@ -300,7 +300,7 @@ def main():
 
     # ---------- 8. 统计 ----------
     print("\n8) 统计")
-    _, stats = call(base, "GET", f"/stats/versions/{vid}", token=token)
+    _, stats = call(base, "GET", f"/stats/projects/{vid}", token=token)
     check("按状态聚合总数正确", sum(x["count"] for x in stats["byStatus"]) == 3)
     check("按优先级聚合总数正确", sum(x["count"] for x in stats["byPriority"]) == 3)
     check("含未分配分组", any(a["label"] == "未分配" for a in stats["byAssignee"]))
@@ -308,10 +308,10 @@ def main():
 
     # ---------- 9. 导出 / 导入往返 ----------
     print("\n9) Excel 导出与导入往返")
-    status, blob = call(base, "GET", f"/versions/{vid}/export", token=token, raw=True)
+    status, blob = call(base, "GET", f"/projects/{vid}/export", token=token, raw=True)
     check("导出返回 xlsx", status == 200 and blob[:2] == b"PK", f"实际 {status}, 前两字节 {blob[:2]!r}")
 
-    status, preview = upload(base, f"/versions/{vid}/import/preview", token, "roundtrip.xlsx", blob)
+    status, preview = upload(base, f"/projects/{vid}/import/preview", token, "roundtrip.xlsx", blob)
     check("导出的文件可直接回传预览 (201)", status == 201, f"实际 {status}: {str(preview)[:200]}")
     if status == 201:
         check("预览无错误行", preview["errorCount"] == 0, f"实际 {preview['errorCount']}")
@@ -322,22 +322,22 @@ def main():
 
         raw_rows = [row["raw"] for row in preview["rows"] if not row["parsed"]["errors"]]
         status, confirmed = call(
-            base, "POST", f"/versions/{vid}/import/confirm", token=token,
+            base, "POST", f"/projects/{vid}/import/confirm", token=token,
             body={"rows": raw_rows}, expect=201,
         )
         check("确认导入写入 3 条", confirmed.get("createdCount") == 3, f"实际 {confirmed}")
 
-        _, summary3 = call(base, "GET", f"/versions/{vid}/summary", token=token)
+        _, summary3 = call(base, "GET", f"/projects/{vid}/summary", token=token)
         check("导入后任务总数为 6", summary3["total"] == 6, f"实际 {summary3['total']}")
 
     # ---------- 10. 清理 ----------
     print("\n10) 清理")
     if args.keep:
-        print(f"  [跳过] 保留测试数据：版本 id = {vid}")
+        print(f"  [跳过] 保留测试数据：项目 id = {vid}")
     else:
-        call(base, "DELETE", f"/versions/{vid}?force=true", token=token)
-        status, _ = call(base, "GET", f"/versions/{vid}", token=token)
-        check("版本已连同任务删除 (404)", status == 404, f"实际 {status}")
+        call(base, "DELETE", f"/projects/{vid}?force=true", token=token)
+        status, _ = call(base, "GET", f"/projects/{vid}", token=token)
+        check("项目已连同任务删除 (404)", status == 404, f"实际 {status}")
         call(base, "DELETE", f"/users/{member['id']}", token=token)
 
     print(f"\n结果：通过 {len(PASSED)} 项，失败 {len(FAILED)} 项")

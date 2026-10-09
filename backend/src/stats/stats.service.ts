@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Priority, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { VersionsService } from '../versions/versions.service';
+import { ProjectsService } from '../projects/projects.service';
 import {
   PRIORITY_LABELS,
   TASK_STATUS_LABELS,
@@ -22,25 +22,25 @@ interface Bucket {
 export class StatsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly versions: VersionsService,
+    private readonly projects: ProjectsService,
   ) {}
 
-  async byVersion(versionId: string) {
+  async byProject(projectId: string) {
     const [summary, statusRows, priorityRows, assigneeRows] = await Promise.all([
-      this.versions.getSummary(versionId),
+      this.projects.getSummary(projectId),
       this.prisma.task.groupBy({
         by: ['status'],
-        where: { versionId, deletedAt: null },
+        where: { projectId, deletedAt: null },
         _count: { _all: true },
       }),
       this.prisma.task.groupBy({
         by: ['priority'],
-        where: { versionId, deletedAt: null },
+        where: { projectId, deletedAt: null },
         _count: { _all: true },
       }),
       this.prisma.task.groupBy({
         by: ['assigneeId', 'status'],
-        where: { versionId, deletedAt: null },
+        where: { projectId, deletedAt: null },
         _count: { _all: true },
         _sum: { progress: true },
       }),

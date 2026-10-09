@@ -3,20 +3,20 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
-import type { VersionStats, VersionView } from '@/types';
-import { statsApi, versionsApi } from '@/api';
+import type { ProjectStats, ProjectView } from '@/types';
+import { statsApi, projectsApi } from '@/api';
 import { errorText } from '@/api/http';
-import VersionTabs from '@/components/VersionTabs.vue';
+import ProjectTabs from '@/components/ProjectTabs.vue';
 import ProgressSummary from '@/components/ProgressSummary.vue';
 import EChart from '@/components/EChart.vue';
 import type { EChartsOption } from 'echarts';
 import { PRIORITY_COLORS, SEMANTIC, TASK_STATUS_BAR_COLORS } from '@/utils/labels';
 
 const route = useRoute();
-const versionId = computed(() => String(route.params.id ?? ''));
+const projectId = computed(() => String(route.params.id ?? ''));
 
-const version = ref<VersionView | null>(null);
-const stats = ref<VersionStats | null>(null);
+const project = ref<ProjectView | null>(null);
+const stats = ref<ProjectStats | null>(null);
 const loading = ref(false);
 
 const statusOption = computed<EChartsOption>(() => ({
@@ -87,12 +87,12 @@ const assigneeOption = computed<EChartsOption>(() => {
 });
 
 async function load() {
-  const id = versionId.value;
+  const id = projectId.value;
   if (!id) return;
   loading.value = true;
   try {
-    const [versionData, statsData] = await Promise.all([versionsApi.get(id), statsApi.byVersion(id)]);
-    version.value = versionData;
+    const [projectData, statsData] = await Promise.all([projectsApi.get(id), statsApi.byProject(id)]);
+    project.value = projectData;
     stats.value = statsData;
   } catch (error) {
     message.error(errorText(error, '加载统计失败'));
@@ -101,13 +101,13 @@ async function load() {
   }
 }
 
-watch(versionId, load);
+watch(projectId, load);
 onMounted(load);
 </script>
 
 <template>
   <div class="page">
-    <VersionTabs v-if="version" :version="version" />
+    <ProjectTabs v-if="project" :project="project" />
 
     <div class="toolbar" style="margin: 8px 0 12px">
       <a-button size="small" :loading="loading" @click="load">

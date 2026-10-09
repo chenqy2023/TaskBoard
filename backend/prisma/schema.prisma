@@ -1,6 +1,6 @@
-// 测试任务看板 - 数据模型
+// 任务看板 - 数据模型
 // 约定：库内时间统一存 UTC，展示层按 Asia/Shanghai 处理。
-// 层级：版本(Version) -> 任务(Task)，任务下挂评论(Comment)与操作日志(ActivityLog)。
+// 层级：项目(Project) -> 任务(Task)，任务下挂评论(Comment)与操作日志(ActivityLog)。
 
 generator client {
   provider = "prisma-client-js"
@@ -16,9 +16,9 @@ enum Role {
   MEMBER
 }
 
-enum VersionStatus {
-  TESTING // 测试中
-  RELEASED // 已发布
+enum ProjectStatus {
+  ACTIVE // 进行中
+  DONE // 已完成
   ARCHIVED // 已归档
 }
 
@@ -60,7 +60,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  createdVersions   Version[]     @relation("VersionCreatedBy")
+  createdProjects   Project[]     @relation("ProjectCreatedBy")
   assignedTasks     Task[]        @relation("TaskAssignee")
   createdTasks      Task[]        @relation("TaskCreatedBy")
   participatedTasks Task[]        @relation("TaskParticipants")
@@ -70,28 +70,28 @@ model User {
   @@map("users")
 }
 
-model Version {
-  id                 String        @id @default(cuid())
-  name               String        @unique
-  description        String?
-  status             VersionStatus @default(TESTING)
-  testStartDate      DateTime?
-  plannedReleaseDate DateTime?
-  createdById        String
-  createdBy          User          @relation("VersionCreatedBy", fields: [createdById], references: [id])
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+model Project {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  description   String?
+  status        ProjectStatus @default(ACTIVE)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdById   String
+  createdBy     User          @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   tasks Task[]
 
   @@index([status])
-  @@map("versions")
+  @@map("projects")
 }
 
 model Task {
   id          String     @id @default(cuid())
-  versionId   String
-  version     Version    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title       String
   description String?
   assigneeId  String?
@@ -120,7 +120,7 @@ model Task {
   comments   Comment[]
   activities ActivityLog[]
 
-  @@index([versionId, status, sortIndex])
+  @@index([projectId, status, sortIndex])
   @@index([assigneeId])
   @@index([plannedEndDate])
   @@index([deletedAt])

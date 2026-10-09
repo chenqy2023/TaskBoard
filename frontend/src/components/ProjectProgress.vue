@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskStatus, VersionSummary } from '@/types';
+import type { TaskStatus, ProjectSummary } from '@/types';
 
-const props = defineProps<{ summary: VersionSummary | null }>();
+const props = defineProps<{ summary: ProjectSummary | null }>();
 
 const SEGMENTS: { status: TaskStatus; label: string; color: string }[] = [
   { status: 'TODO', label: '未开始', color: 'var(--tk-status-todo)' },

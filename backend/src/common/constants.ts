@@ -1,4 +1,4 @@
-import { ActivityAction, Priority, TaskStatus, VersionStatus } from '@prisma/client';
+import { ActivityAction, Priority, TaskStatus, ProjectStatus } from '@prisma/client';
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   [TaskStatus.TODO]: '未开始',
@@ -23,10 +23,10 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   [Priority.P3]: '低',
 };
 
-export const VERSION_STATUS_LABELS: Record<VersionStatus, string> = {
-  [VersionStatus.TESTING]: '测试中',
-  [VersionStatus.RELEASED]: '已发布',
-  [VersionStatus.ARCHIVED]: '已归档',
+export const VERSION_STATUS_LABELS: Record<ProjectStatus, string> = {
+  [ProjectStatus.ACTIVE]: '进行中',
+  [ProjectStatus.DONE]: '已完成',
+  [ProjectStatus.ARCHIVED]: '已归档',
 };
 
 export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {

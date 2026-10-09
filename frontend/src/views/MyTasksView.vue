@@ -74,7 +74,7 @@ function openDetail(task: TaskView) {
 }
 
 async function openProject(task: TaskView) {
-  if (task.version) await router.push({ name: 'board', params: { id: task.version.id } });
+  if (task.project) await router.push({ name: 'board', params: { id: task.project.id } });
 }
 
 onMounted(load);
@@ -109,8 +109,8 @@ onMounted(load);
               <a-list-item-meta>
                 <template #title>
                   <a @click="openDetail(item)">{{ item.title }}</a>
-                  <a-tag v-if="item.version" style="margin-left: 8px" @click="openProject(item)">
-                    {{ item.version.name }}
+                  <a-tag v-if="item.project" style="margin-left: 8px" @click="openProject(item)">
+                    {{ item.project.name }}
                   </a-tag>
                 </template>
                 <template #description>
@@ -149,7 +149,7 @@ onMounted(load);
     <TaskDetailModal v-model:open="detailOpen" :task="detailTask" @changed="load" @edit="(task) => { editingTask = task; formOpen = true; }" />
     <TaskFormModal
       v-model:open="formOpen"
-      :version-id="editingTask?.versionId ?? ''"
+      :project-id="editingTask?.projectId ?? ''"
       :task="editingTask"
       :users="users"
       @saved="load"

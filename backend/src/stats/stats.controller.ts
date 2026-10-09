@@ -8,9 +8,9 @@ import { StatsService } from './stats.service';
 export class StatsController {
   constructor(private readonly statsService: StatsService) {}
 
-  @Get('versions/:versionId')
-  @ApiOperation({ summary: '版本统计：按状态/优先级/负责人/模块聚合' })
-  byVersion(@Param('versionId') versionId: string) {
-    return this.statsService.byVersion(versionId);
+  @Get('projects/:projectId')
+  @ApiOperation({ summary: '项目统计：按状态/优先级/负责人/模块聚合' })
+  byProject(@Param('projectId') projectId: string) {
+    return this.statsService.byProject(projectId);
   }
 }

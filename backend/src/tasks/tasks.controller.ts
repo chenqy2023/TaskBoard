@@ -25,16 +25,16 @@ import { CurrentUser, type AuthUser } from '../common/decorators/current-user.de
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
-  @Get('versions/:versionId/tasks')
+  @Get('projects/:projectId/tasks')
   @ApiOperation({ summary: '任务列表（分页 + 筛选 + 排序）' })
-  findAll(@Param('versionId') versionId: string, @Query() query: QueryTaskDto) {
-    return this.tasksService.findAll(versionId, query);
+  findAll(@Param('projectId') projectId: string, @Query() query: QueryTaskDto) {
+    return this.tasksService.findAll(projectId, query);
   }
 
-  @Get('versions/:versionId/board')
-  @ApiOperation({ summary: '看板数据：该版本全部任务（不分页）' })
-  findBoard(@Param('versionId') versionId: string, @Query() query: QueryTaskDto) {
-    return this.tasksService.findBoard(versionId, query);
+  @Get('projects/:projectId/board')
+  @ApiOperation({ summary: '看板数据：该项目全部任务（不分页）' })
+  findBoard(@Param('projectId') projectId: string, @Query() query: QueryTaskDto) {
+    return this.tasksService.findBoard(projectId, query);
   }
 
   @Get('tasks/my')

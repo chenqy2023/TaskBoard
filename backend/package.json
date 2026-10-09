@@ -1,8 +1,8 @@
 {
-  "name": "test-kanban-backend",
+  "name": "task-kanban-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "测试任务看板 - 后端 (NestJS + Prisma + PostgreSQL)",
+  "description": "Task Kanban backend (NestJS + Prisma + PostgreSQL)",
   "scripts": {
     "build": "nest build",
     "start": "nest start",
@@ -81,5 +81,6 @@
     "moduleNameMapper": {
       "^src/(.*)$": "<rootDir>/$1"
     }
-  }
+  },
+  "license": "MIT"
 }

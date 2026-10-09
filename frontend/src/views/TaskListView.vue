@@ -3,8 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
-import type { Priority, TaskFilters, TaskStatus, TaskView, User, VersionView } from '@/types';
-import { taskIoApi, tasksApi, usersApi, versionsApi } from '@/api';
+import type { Priority, TaskFilters, TaskStatus, TaskView, User, ProjectView } from '@/types';
+import { taskIoApi, tasksApi, usersApi, projectsApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useRealtime, notifyRemoteChange } from '@/composables/useRealtime';
 import {
@@ -15,16 +15,16 @@ import {
   priorityColor,
   progressColor,
 } from '@/utils/labels';
-import VersionTabs from '@/components/VersionTabs.vue';
+import ProjectTabs from '@/components/ProjectTabs.vue';
 import FilterBar from '@/components/FilterBar.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
 import TaskDetailModal from '@/components/TaskDetailModal.vue';
 import ImportModal from '@/components/ImportModal.vue';
 
 const route = useRoute();
-const versionId = computed(() => String(route.params.id ?? ''));
+const projectId = computed(() => String(route.params.id ?? ''));
 
-const version = ref<VersionView | null>(null);
+const project = ref<ProjectView | null>(null);
 const items = ref<TaskView[]>([]);
 const total = ref(0);
 const users = ref<User[]>([]);
@@ -64,12 +64,12 @@ const columns = [
 ];
 
 async function load() {
-  const id = versionId.value;
+  const id = projectId.value;
   if (!id) return;
   loading.value = true;
   try {
-    const [versionData, result, userList] = await Promise.all([
-      version.value ?? versionsApi.get(id),
+    const [projectData, result, userList] = await Promise.all([
+      project.value ?? projectsApi.get(id),
       tasksApi.list(id, {
         ...filters.value,
         page: page.value,
@@ -79,7 +79,7 @@ async function load() {
       }),
       users.value.length ? Promise.resolve(users.value) : usersApi.list(),
     ]);
-    version.value = versionData as VersionView;
+    project.value = projectData as ProjectView;
     items.value = result.items;
     total.value = result.total;
     users.value = userList;
@@ -91,7 +91,7 @@ async function load() {
   }
 }
 
-const { connected } = useRealtime(() => versionId.value, async (event) => {
+const { connected } = useRealtime(() => projectId.value, async (event) => {
   notifyRemoteChange(event);
   try {
     await load();
@@ -107,8 +107,8 @@ watch(filters, () => {
 
 watch([page, pageSize], () => void load());
 
-watch(versionId, () => {
-  version.value = null;
+watch(projectId, () => {
+  project.value = null;
   page.value = 1;
   void load();
 });
@@ -195,7 +195,7 @@ async function submitBatch() {
 }
 
 async function exportExcel() {
-  await taskIoApi.download(versionId.value, `${version.value?.name ?? '任务'}-任务清单.xlsx`);
+  await taskIoApi.download(projectId.value, `${project.value?.name ?? '任务'}-任务清单.xlsx`);
   message.success('已开始下载');
 }
 
@@ -204,7 +204,7 @@ onMounted(load);
 
 <template>
   <div class="page">
-    <VersionTabs v-if="version" :version="version" />
+    <ProjectTabs v-if="project" :project="project" />
 
     <div class="toolbar list-toolbar">
       <FilterBar v-model:filters="filters" :users="users" />
@@ -340,7 +340,7 @@ onMounted(load);
 
     <TaskFormModal
       v-model:open="formOpen"
-      :version-id="versionId"
+      :project-id="projectId"
       :task="editingTask"
       :users="users"
       @saved="load"
@@ -350,8 +350,8 @@ onMounted(load);
 
     <ImportModal
       v-model:open="importOpen"
-      :version-id="versionId"
-      :version-name="version?.name ?? '版本'"
+      :project-id="projectId"
+      :project-name="project?.name ?? '项目'"
       @imported="load"
     />
 

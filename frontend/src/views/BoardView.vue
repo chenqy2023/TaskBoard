@@ -4,8 +4,8 @@ import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
 import draggable from 'vuedraggable';
-import type { TaskFilters, TaskStatus, TaskView, User, VersionSummary, VersionView } from '@/types';
-import { taskIoApi, tasksApi, usersApi, versionsApi } from '@/api';
+import type { TaskFilters, TaskStatus, TaskView, User, ProjectSummary, ProjectView } from '@/types';
+import { taskIoApi, tasksApi, usersApi, projectsApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useRealtime, notifyRemoteChange } from '@/composables/useRealtime';
 import {
@@ -15,7 +15,7 @@ import {
   TASK_STATUS_TINTS,
 } from '@/utils/labels';
 import ProgressSummary from '@/components/ProgressSummary.vue';
-import VersionTabs from '@/components/VersionTabs.vue';
+import ProjectTabs from '@/components/ProjectTabs.vue';
 import FilterBar from '@/components/FilterBar.vue';
 import TaskCard from '@/components/TaskCard.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
@@ -23,10 +23,10 @@ import TaskDetailModal from '@/components/TaskDetailModal.vue';
 import ImportModal from '@/components/ImportModal.vue';
 
 const route = useRoute();
-const versionId = computed(() => String(route.params.id ?? ''));
+const projectId = computed(() => String(route.params.id ?? ''));
 
-const version = ref<VersionView | null>(null);
-const summary = ref<VersionSummary | null>(null);
+const project = ref<ProjectView | null>(null);
+const summary = ref<ProjectSummary | null>(null);
 const columns = reactive<Record<TaskStatus, TaskView[]>>({
   TODO: [],
   IN_PROGRESS: [],
@@ -68,17 +68,17 @@ function toggleStatus(status?: TaskStatus) {
    纯 CSS 方案没有这些坑，任何重排都会自动跟上。 */
 
 async function loadAll() {
-  const id = versionId.value;
+  const id = projectId.value;
   if (!id) return;
   loading.value = true;
   try {
-    const [versionData, summaryData, boardTasks, userList] = await Promise.all([
-      versionsApi.get(id),
-      versionsApi.summary(id),
+    const [projectData, summaryData, boardTasks, userList] = await Promise.all([
+      projectsApi.get(id),
+      projectsApi.summary(id),
       tasksApi.board(id, filters.value),
       usersApi.list(),
     ]);
-    version.value = versionData;
+    project.value = projectData;
     summary.value = summaryData;
     users.value = userList;
 
@@ -96,9 +96,9 @@ async function loadAll() {
 }
 
 async function loadTasksAndSummary() {
-  const id = versionId.value;
+  const id = projectId.value;
   const [summaryData, boardTasks] = await Promise.all([
-    versionsApi.summary(id),
+    projectsApi.summary(id),
     tasksApi.board(id, filters.value),
   ]);
   summary.value = summaryData;
@@ -106,7 +106,7 @@ async function loadTasksAndSummary() {
   for (const task of boardTasks) columns[task.status].push(task);
 }
 
-const { connected } = useRealtime(() => versionId.value, async (event) => {
+const { connected } = useRealtime(() => projectId.value, async (event) => {
   notifyRemoteChange(event);
   try {
     await loadTasksAndSummary();
@@ -123,7 +123,7 @@ watch(
   { deep: true },
 );
 
-watch(versionId, () => {
+watch(projectId, () => {
   void loadAll();
 });
 
@@ -176,7 +176,7 @@ function openDetail(task: TaskView) {
 
 async function exportExcel() {
   try {
-    await taskIoApi.download(versionId.value, `${version.value?.name ?? '任务'}-任务清单.xlsx`);
+    await taskIoApi.download(projectId.value, `${project.value?.name ?? '任务'}-任务清单.xlsx`);
     message.success('已开始下载');
   } catch (error) {
     message.error(errorText(error, '导出失败'));
@@ -189,9 +189,9 @@ onMounted(loadAll);
 <template>
   <div class="page page--board">
     <div class="board-canvas">
-      <!-- 控制区浮在画布上：版本信息 + 进度汇总 + 筛选工具，做成一条磨砂横条 -->
+      <!-- 控制区浮在画布上：项目信息 + 进度汇总 + 筛选工具，做成一条磨砂横条 -->
       <div class="board-chrome">
-        <VersionTabs v-if="version" :version="version" />
+        <ProjectTabs v-if="project" :project="project" />
 
         <div class="summary-row">
           <ProgressSummary :summary="summary" />
@@ -308,7 +308,7 @@ onMounted(loadAll);
 
     <TaskFormModal
       v-model:open="formOpen"
-      :version-id="versionId"
+      :project-id="projectId"
       :task="editingTask"
       :users="users"
       :default-status="defaultStatus"
@@ -324,8 +324,8 @@ onMounted(loadAll);
 
     <ImportModal
       v-model:open="importOpen"
-      :version-id="versionId"
-      :version-name="version?.name ?? '版本'"
+      :project-id="projectId"
+      :project-name="project?.name ?? '项目'"
       @imported="loadAll"
     />
   </div>

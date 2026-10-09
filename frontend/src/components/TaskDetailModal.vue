@@ -358,9 +358,9 @@ function removeTask() {
 
           <div class="rail-group">
             <div class="micro rail-title">基本信息</div>
-            <div v-if="task.version" class="rail-row">
-              <span class="rail-key">版本</span>
-              <span class="rail-val">{{ task.version.name }}</span>
+            <div v-if="task.project" class="rail-row">
+              <span class="rail-key">项目</span>
+              <span class="rail-val">{{ task.project.name }}</span>
             </div>
             <div class="rail-row">
               <span class="rail-key">创建人</span>

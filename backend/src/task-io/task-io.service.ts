@@ -61,15 +61,15 @@ export class TaskIoService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  async buildExport(versionId: string) {
-    const version = await this.prisma.version.findUnique({
-      where: { id: versionId },
+  async buildExport(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
       select: { id: true, name: true },
     });
-    if (!version) throw new NotFoundException('版本不存在');
+    if (!project) throw new NotFoundException('项目不存在');
 
     const tasks = await this.prisma.task.findMany({
-      where: { versionId, deletedAt: null },
+      where: { projectId, deletedAt: null },
       include: {
         assignee: { select: { displayName: true } },
         participants: { select: { displayName: true } },
@@ -78,7 +78,7 @@ export class TaskIoService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = '测试任务看板';
+    workbook.creator = '任务看板';
     const sheet = workbook.addWorksheet('任务清单');
 
     sheet.columns = [
@@ -142,13 +142,13 @@ export class TaskIoService {
     const buffer = await workbook.xlsx.writeBuffer();
     return {
       buffer: Buffer.from(buffer),
-      filename: `${version.name}-任务清单.xlsx`,
+      filename: `${project.name}-任务清单.xlsx`,
     };
   }
 
   /** 解析上传的 xlsx 并逐行校验，不落库 */
-  async previewImport(versionId: string, fileBuffer: Buffer) {
-    await this.assertVersionExists(versionId);
+  async previewImport(projectId: string, fileBuffer: Buffer) {
+    await this.assertProjectExists(projectId);
 
     const workbook = new ExcelJS.Workbook();
     try {
@@ -186,8 +186,8 @@ export class TaskIoService {
   }
 
   /** 确认导入：服务端重新跑一遍校验，不信任前端回传的结果 */
-  async confirmImport(versionId: string, rows: ImportRowDto[], actor: AuthUser) {
-    await this.assertVersionExists(versionId);
+  async confirmImport(projectId: string, rows: ImportRowDto[], actor: AuthUser) {
+    await this.assertProjectExists(projectId);
     const ctx = await this.buildContext();
 
     const prepared = rows
@@ -205,7 +205,7 @@ export class TaskIoService {
       for (const row of prepared) {
         const task = await tx.task.create({
           data: {
-            versionId,
+            projectId,
             title: row.title.slice(0, 200),
             description: row.description,
             assigneeId: row.assigneeId && validUserIds.has(row.assigneeId) ? row.assigneeId : null,
@@ -244,8 +244,8 @@ export class TaskIoService {
       return ids;
     });
 
-    await this.realtime.emitToVersion(versionId, 'task.batch-updated', {
-      versionId,
+    await this.realtime.emitToProject(projectId, 'task.batch-updated', {
+      projectId,
       ids: created,
       by: actor.displayName,
     });
@@ -307,12 +307,12 @@ export class TaskIoService {
     return { users };
   }
 
-  private async assertVersionExists(versionId: string) {
-    const version = await this.prisma.version.findUnique({
-      where: { id: versionId },
+  private async assertProjectExists(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
       select: { id: true },
     });
-    if (!version) throw new NotFoundException('版本不存在');
+    if (!project) throw new NotFoundException('项目不存在');
   }
 }
 

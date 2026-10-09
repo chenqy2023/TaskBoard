@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskStatus, VersionSummary } from '@/types';
+import type { TaskStatus, ProjectSummary } from '@/types';
 import { TASK_STATUS_BAR_COLORS, TASK_STATUS_LABELS, progressColor } from '@/utils/labels';
 
 const props = withDefaults(
   defineProps<{
-    summary: VersionSummary | null;
+    summary: ProjectSummary | null;
     showStatusBreakdown?: boolean;
   }>(),
   { showStatusBreakdown: false },
