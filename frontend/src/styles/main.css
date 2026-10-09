@@ -54,10 +54,13 @@
   --tk-shadow-card: 0 1px 3px rgba(9, 30, 66, 0.12), 0 0 1px rgba(9, 30, 66, 0.12);
   --tk-shadow-card-hover: 0 4px 10px rgba(9, 30, 66, 0.16);
   --tk-shadow-panel: 0 6px 16px rgba(9, 30, 66, 0.16);
+  /* 浅色底上的列面板：比卡片略重、比浮层轻 */
+  --tk-shadow-column: 0 2px 8px rgba(9, 30, 66, 0.1);
 
-  /* 看板画布：看板页是一块浮起的渐变板面，列是上面的白色面板。
-     觉得太跳就改这一个值（例如换成浅色渐变），或整块去掉 */
-  --tk-canvas: linear-gradient(135deg, #18202a 0%, #2a3d50 46%, #44698c 100%);
+  /* 页面背景（首页与看板共用）：与其他页面一致的浅色。
+     若想要回深色工作区，只改这一行即可，例如：
+     linear-gradient(135deg, #18202a 0%, #2a3d50 46%, #44698c 100%) */
+  --tk-canvas: var(--tk-bg);
   --tk-panel: #f7f8fa;
   --tk-hairline: rgba(9, 30, 66, 0.08);
 

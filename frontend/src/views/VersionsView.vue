@@ -250,33 +250,33 @@ onMounted(load);
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: var(--tk-ink);
 }
 
 .home-summary {
   margin: 6px 0 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--tk-ink-3);
 }
 
 .home-summary b {
-  color: #fff;
+  color: var(--tk-ink);
   font-weight: 600;
 }
 
 .home-summary .risky,
 .home-summary .risky b {
-  color: #ff9c9c;
+  color: var(--tk-danger);
 }
 
 .filter-note {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--tk-ink-4);
 }
 
 .home-empty {
   margin-top: 20px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--tk-ink-3);
 }
 
 /* ---------- 卡片墙 ---------- */
@@ -292,18 +292,19 @@ onMounted(load);
   flex-direction: column;
   padding: 0;
   border: 0;
+  border: 1px solid var(--tk-hairline);
   border-radius: var(--tk-radius-md);
   background: #fff;
   overflow: hidden;
   text-align: left;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(8, 20, 32, 0.28);
+  box-shadow: var(--tk-shadow-card);
   transition: transform 0.16s, box-shadow 0.16s;
 }
 
 .vcard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(8, 20, 32, 0.38);
+  box-shadow: var(--tk-shadow-card-hover);
 }
 
 .vcard-cover {
@@ -314,7 +315,18 @@ onMounted(load);
   align-items: flex-end;
 }
 
+/* 自下而上的暗色蒙版：让白色版本名在任何一张渐变上都够清晰 */
+.vcard-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 62%);
+  pointer-events: none;
+}
+
 .vcard-name {
+  position: relative;
+  z-index: 1;
   font-size: 17px;
   font-weight: 700;
   color: #fff;
@@ -326,12 +338,13 @@ onMounted(load);
 /* 任务数徽章压在封面右上角 */
 .vcard-count {
   position: absolute;
+  z-index: 1;
   top: 10px;
   right: 12px;
   min-width: 22px;
   padding: 0 6px;
   border-radius: var(--tk-radius-sm);
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.46);
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -342,6 +355,7 @@ onMounted(load);
 /* 管理操作在悬停时才出现，平时不干扰看封面 */
 .vcard-more {
   position: absolute;
+  z-index: 1;
   top: 8px;
   left: 8px;
   width: 26px;
@@ -432,15 +446,16 @@ onMounted(load);
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px dashed rgba(255, 255, 255, 0.28);
+  background: #fff;
+  border: 1px dashed rgba(9, 30, 66, 0.3);
   box-shadow: none;
-  color: #fff;
+  color: var(--tk-ink-2);
 }
 
 .vcard-new:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #fff;
+  border-color: var(--tk-brand);
+  color: var(--tk-brand);
 }
 
 .vcard-new-icon {
@@ -450,8 +465,9 @@ onMounted(load);
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  border: 1px solid currentColor;
   font-size: 17px;
+  opacity: 0.8;
 }
 
 .vcard-new-text {

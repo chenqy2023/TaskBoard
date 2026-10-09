@@ -354,7 +354,7 @@ onMounted(loadAll);
   overflow: hidden;
 }
 
-/* 控制条：半透明白 + 背景模糊，落在渐变上仍保持文字可读 */
+/* 控制条：浅色底上就是一张普通白卡 */
 .board-chrome {
   flex: none;
   width: 100%;
@@ -362,9 +362,9 @@ onMounted(loadAll);
   margin: 0 auto;
   padding: 10px 14px 12px;
   border-radius: var(--tk-radius-md);
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 6px 20px rgba(8, 20, 32, 0.24);
+  background: #fff;
+  border: 1px solid var(--tk-hairline);
+  box-shadow: var(--tk-shadow-card);
 }
 
 .summary-row {
@@ -460,12 +460,12 @@ onMounted(loadAll);
 }
 
 .board-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(9, 30, 66, 0.18);
   border-radius: var(--tk-radius-pill);
 }
 
 .board-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(9, 30, 66, 0.32);
 }
 
 /* ===== 列：画布上浮起的面板 ===== */
@@ -475,10 +475,11 @@ onMounted(loadAll);
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--tk-panel);
+  background: #fff;
+  border: 1px solid var(--tk-hairline);
   border-top: 3px solid var(--tk-ink-4);
   border-radius: var(--tk-radius-md);
-  box-shadow: var(--tk-shadow-panel);
+  box-shadow: var(--tk-shadow-column);
   overflow: hidden;
 }
 
@@ -487,7 +488,7 @@ onMounted(loadAll);
   align-items: center;
   gap: 7px;
   padding: 11px 12px;
-  background: #fff;
+  background: var(--tk-panel);
   border-bottom: 1px solid var(--tk-hairline);
   flex: none;
 }
@@ -521,7 +522,7 @@ onMounted(loadAll);
   padding: 14px 6px;
   border: 1px dashed rgba(9, 30, 66, 0.16);
   border-radius: var(--tk-radius-sm);
-  background: rgba(255, 255, 255, 0.56);
+  background: rgba(9, 30, 66, 0.03);
 }
 
 /* 列底部的「新建任务」行 */
