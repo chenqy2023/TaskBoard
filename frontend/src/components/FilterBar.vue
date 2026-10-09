@@ -8,39 +8,42 @@ const props = withDefaults(
   defineProps<{
     filters: TaskFilters;
     users: User[];
-    modules: string[];
     hideStatus?: boolean;
   }>(),
   { hideStatus: false },
 );
 
-const emit = defineEmits<{ (e: 'update:filters', value: TaskFilters): void; (e: 'change'): void }>();
+const emit = defineEmits<{ (e: 'update:filters', value: TaskFilters): void }>();
 
 function patch(partial: Partial<TaskFilters>) {
   emit('update:filters', { ...props.filters, ...partial });
-  emit('change');
 }
 
 function reset() {
   emit('update:filters', { keyword: '' });
-  emit('change');
 }
 
-const userOptions = computed(() => [
+const assigneeOptions = computed(() => [
   { value: 'unassigned', label: '未分配' },
   ...props.users.map((user) => ({ value: user.id, label: user.displayName })),
 ]);
 
-const moduleOptions = computed(() => props.modules.map((value) => ({ value, label: value })));
+const participantOptions = computed(() =>
+  props.users.map((user) => ({ value: user.id, label: user.displayName })),
+);
 
 const hasFilter = computed(
   () =>
     !!props.filters.keyword ||
     !!props.filters.assigneeId ||
+    !!props.filters.participantId ||
     !!props.filters.priority ||
-    !!props.filters.module ||
     !!props.filters.status,
 );
+
+function filterByLabel(input: string, option: { label?: string }) {
+  return String(option.label ?? '').toLowerCase().includes(input.toLowerCase());
+}
 </script>
 
 <template>
@@ -60,18 +63,21 @@ const hasFilter = computed(
       class="filter-item"
       placeholder="负责人"
       allow-clear
-      :options="userOptions"
+      show-search
+      :options="assigneeOptions"
+      :filter-option="filterByLabel"
       @update:value="(value: string | undefined) => patch({ assigneeId: value })"
     />
 
     <a-select
-      :value="filters.module"
+      :value="filters.participantId"
       class="filter-item"
-      placeholder="模块"
+      placeholder="参与人"
       allow-clear
       show-search
-      :options="moduleOptions"
-      @update:value="(value: string | undefined) => patch({ module: value })"
+      :options="participantOptions"
+      :filter-option="filterByLabel"
+      @update:value="(value: string | undefined) => patch({ participantId: value })"
     />
 
     <a-select
@@ -111,14 +117,14 @@ const hasFilter = computed(
 }
 
 .filter-keyword {
-  width: 220px;
+  width: 200px;
 }
 
 .filter-item {
-  width: 150px;
+  width: 140px;
 }
 
 .filter-item-sm {
-  width: 120px;
+  width: 118px;
 }
 </style>

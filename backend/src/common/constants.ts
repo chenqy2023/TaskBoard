@@ -34,28 +34,48 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   [ActivityAction.TASK_DELETED]: '删除了任务',
   [ActivityAction.STATUS_CHANGED]: '变更了状态',
   [ActivityAction.ASSIGNEE_CHANGED]: '变更了负责人',
+  [ActivityAction.PARTICIPANTS_CHANGED]: '变更了参与人',
   [ActivityAction.PRIORITY_CHANGED]: '变更了优先级',
-  [ActivityAction.DUE_DATE_CHANGED]: '变更了截止日期',
+  [ActivityAction.DUE_DATE_CHANGED]: '变更了日期',
   [ActivityAction.PROGRESS_CHANGED]: '更新了进度',
   [ActivityAction.COMMENT_ADDED]: '发表了评论',
 };
 
-/** 进度变动小于该阈值不记日志，避免拖动进度条刷屏 */
+/** 四个计划/实际日期的字段名与中文名，日志与 Excel 都按这个顺序 */
+export const DATE_FIELDS = [
+  'plannedStartDate',
+  'plannedEndDate',
+  'actualStartDate',
+  'actualEndDate',
+] as const;
+
+export type DateField = (typeof DATE_FIELDS)[number];
+
+export const DATE_FIELD_LABELS: Record<DateField, string> = {
+  plannedStartDate: '计划开始日期',
+  plannedEndDate: '计划结束日期',
+  actualStartDate: '实际开始日期',
+  actualEndDate: '实际结束日期',
+};
+
+/** 进度变动小于该阈值不记日志，避免拖动进度时刷屏 */
 export const PROGRESS_LOG_THRESHOLD = 5;
 
 /** Excel 导入导出的列名（顺序即列顺序） */
 export const TASK_EXCEL_COLUMNS = [
   '标题',
-  '模块',
   '负责人',
+  '参与人',
   '优先级',
   '状态',
   '进度',
-  '截止日期',
+  '计划开始日期',
+  '计划结束日期',
+  '实际开始日期',
+  '实际结束日期',
   '描述',
 ] as const;
 
-/** 反向映射：中文标签 -> 枚举值，用于 Excel 导入 */
 export function buildLabelToEnum<T extends string>(labels: Record<T, string>): Record<string, T> {
   return Object.entries(labels).reduce<Record<string, T>>((acc, [value, label]) => {
     acc[label as string] = value as T;

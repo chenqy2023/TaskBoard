@@ -16,14 +16,14 @@ export class ImportRowDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(80)
-  module?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
   @MaxLength(50)
   assignee?: string;
+
+  @ApiPropertyOptional({ description: '多个参与人用「、」「,」或空格分隔' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  participants?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -43,7 +43,22 @@ export class ImportRowDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  dueDate?: string;
+  plannedStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  plannedEndDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  actualStartDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  actualEndDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

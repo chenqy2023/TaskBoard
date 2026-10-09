@@ -18,6 +18,10 @@ coverage/
 npm-debug.log*
 .tmp-*
 
+# python 缓存（scripts 下的冒烟脚本）
+__pycache__/
+*.pyc
+
 # editor / os
 .vscode/*
 !.vscode/extensions.json

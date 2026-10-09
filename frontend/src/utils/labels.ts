@@ -59,11 +59,37 @@ export const ACTIVITY_ACTION_LABELS: Record<string, string> = {
   TASK_DELETED: '删除了任务',
   STATUS_CHANGED: '变更了状态',
   ASSIGNEE_CHANGED: '变更了负责人',
+  PARTICIPANTS_CHANGED: '变更了参与人',
   PRIORITY_CHANGED: '变更了优先级',
-  DUE_DATE_CHANGED: '变更了截止日期',
+  DUE_DATE_CHANGED: '变更了日期',
   PROGRESS_CHANGED: '更新了进度',
   COMMENT_ADDED: '发表了评论',
 };
+
+/** 四个计划/实际日期的字段名与中文名 */
+export const DATE_FIELDS = [
+  'plannedStartDate',
+  'plannedEndDate',
+  'actualStartDate',
+  'actualEndDate',
+] as const;
+
+export type DateField = (typeof DATE_FIELDS)[number];
+
+export const DATE_FIELD_LABELS: Record<DateField, string> = {
+  plannedStartDate: '计划开始日期',
+  plannedEndDate: '计划结束日期',
+  actualStartDate: '实际开始日期',
+  actualEndDate: '实际结束日期',
+};
+
+/** 日期型字段的日志标题更具体一些，比统一的「变更了日期」好读 */
+export function activityTitle(action: string, field: string | null): string {
+  if (action === 'DUE_DATE_CHANGED' && field && field in DATE_FIELD_LABELS) {
+    return `变更了${DATE_FIELD_LABELS[field as DateField]}`;
+  }
+  return ACTIVITY_ACTION_LABELS[action] ?? action;
+}
 
 /** 把日志里的字段原始值翻译成人看得懂的文案 */
 export function describeActivityValue(field: string | null, value: string | null): string {
@@ -71,6 +97,7 @@ export function describeActivityValue(field: string | null, value: string | null
   if (field === 'status') return TASK_STATUS_LABELS[value as TaskStatus] ?? value;
   if (field === 'priority') return PRIORITY_LABELS[value as Priority] ?? value;
   if (field === 'progress') return `${value}%`;
+  if (field === 'assigneeId') return value;
   return value;
 }
 

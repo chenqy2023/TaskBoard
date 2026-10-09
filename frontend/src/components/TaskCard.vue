@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ClockCircleOutlined, UserOutlined } from '@ant-design/icons-vue';
+import { CalendarOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import type { TaskView } from '@/types';
 import { PRIORITY_LABELS, priorityColor, progressColor } from '@/utils/labels';
@@ -12,7 +12,13 @@ const emit = defineEmits<{
   (e: 'edit', task: TaskView): void;
 }>();
 
-const dueText = computed(() => (props.task.dueDate ? dayjs(props.task.dueDate).format('MM-DD') : null));
+const plannedEnd = computed(() =>
+  props.task.plannedEndDate ? dayjs(props.task.plannedEndDate).format('MM-DD') : null,
+);
+
+const participantText = computed(() =>
+  props.task.participants.map((item) => item.displayName).join('、'),
+);
 </script>
 
 <template>
@@ -27,14 +33,18 @@ const dueText = computed(() => (props.task.dueDate ? dayjs(props.task.dueDate).f
     </div>
 
     <div class="card-meta">
-      <a-tag v-if="task.module" class="module-tag">{{ task.module }}</a-tag>
       <span class="assignee">
         <UserOutlined />
         {{ task.assignee?.displayName ?? '未分配' }}
       </span>
-      <span v-if="dueText" class="due" :class="{ overdue: task.overdue }">
-        <ClockCircleOutlined />
-        {{ dueText }}
+      <span v-if="task.participants.length" class="participants" :title="participantText">
+        <TeamOutlined />
+        {{ participantText }}
+      </span>
+      <span v-if="plannedEnd" class="due" :class="{ overdue: task.overdue }">
+        <CalendarOutlined />
+        {{ plannedEnd }}
+        <template v-if="task.overdue">逾期</template>
       </span>
     </div>
 
@@ -98,26 +108,27 @@ const dueText = computed(() => (props.task.dueDate ? dayjs(props.task.dueDate).f
 .card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   margin: 6px 0 4px;
   font-size: 12px;
   color: rgba(0, 0, 0, 0.55);
 }
 
-.module-tag {
-  margin-inline-end: 0;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .assignee,
+.participants,
 .due {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;
+}
+
+.participants {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .due.overdue {

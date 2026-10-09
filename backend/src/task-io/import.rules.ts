@@ -6,12 +6,15 @@ import { clampProgress } from '../versions/version-summary';
 export interface RawImportRow {
   rowNo: number;
   title: string;
-  module: string;
   assignee: string;
+  participants: string;
   priority: string;
   status: string;
   progress: string;
-  dueDate: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  actualStartDate: string;
+  actualEndDate: string;
   description: string;
 }
 
@@ -24,13 +27,17 @@ export interface UserLookup {
 export interface ParsedImportRow {
   rowNo: number;
   title: string;
-  module: string;
   assigneeName: string | null;
   assigneeId: string | null;
+  participantNames: string[];
+  participantIds: string[];
   priority: Priority;
   status: TaskStatus;
   progress: number;
-  dueDate: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  actualStartDate: string | null;
+  actualEndDate: string | null;
   description: string | null;
   errors: string[];
   warnings: string[];
@@ -40,9 +47,17 @@ export interface ImportContext {
   users: UserLookup[];
 }
 
+/** 参与人在单元格里用 、 , ， ; / 空格 分隔都认 */
+export function splitNames(input: string): string[] {
+  return String(input ?? '')
+    .split(/[、,，;；/\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 /**
  * 解析并校验一行导入数据。纯函数，便于单测覆盖各种脏数据。
- * 规则：标题缺失算错误（该行不导入）；优先级/状态/负责人识别不了只算警告（用默认值兜底）。
+ * 规则：标题缺失算错误（该行不导入）；优先级/状态/负责人/日期识别不了只算警告（用默认值或留空兜底）。
  */
 export function parseImportRow(raw: RawImportRow, ctx: ImportContext): ParsedImportRow {
   const errors: string[] = [];
@@ -71,6 +86,7 @@ export function parseImportRow(raw: RawImportRow, ctx: ImportContext): ParsedImp
     } else {
       progress = clampProgress(parsed);
       if (parsed < 0 || parsed > 100) warnings.push('进度超出 0-100，已截断');
+      else if (!Number.isInteger(parsed)) warnings.push('进度不是整数，已四舍五入');
     }
   }
 
@@ -80,42 +96,63 @@ export function parseImportRow(raw: RawImportRow, ctx: ImportContext): ParsedImp
   }
   const finalProgress = finalStatus === TaskStatus.DONE ? 100 : progress;
 
-  let dueDate: string | null = null;
-  const dueRaw = (raw.dueDate ?? '').toString().trim();
-  if (dueRaw) {
-    dueDate = normalizeDueDate(dueRaw);
-    if (!dueDate) warnings.push(`截止日期「${raw.dueDate}」无法识别，已留空`);
-  }
+  const dates = {
+    plannedStartDate: readDate(raw.plannedStartDate, '计划开始日期', warnings),
+    plannedEndDate: readDate(raw.plannedEndDate, '计划结束日期', warnings),
+    actualStartDate: readDate(raw.actualStartDate, '实际开始日期', warnings),
+    actualEndDate: readDate(raw.actualEndDate, '实际结束日期', warnings),
+  };
 
   const assigneeName = (raw.assignee ?? '').trim();
-  let assigneeId: string | null = null;
-  if (assigneeName) {
-    const matched = ctx.users.find(
-      (user) =>
-        user.username.toLowerCase() === assigneeName.toLowerCase() ||
-        user.displayName === assigneeName,
-    );
+  const assignee = assigneeName ? matchUser(assigneeName, ctx) : undefined;
+  if (assigneeName && !assignee) {
+    warnings.push(`负责人「${assigneeName}」在系统中不存在，已留空`);
+  }
+
+  const participantNames = splitNames(raw.participants);
+  const participantIds: string[] = [];
+  const missing: string[] = [];
+  for (const name of participantNames) {
+    const matched = matchUser(name, ctx);
     if (matched) {
-      assigneeId = matched.id;
-    } else {
-      warnings.push(`负责人「${assigneeName}」在系统中不存在，已留空`);
+      if (!participantIds.includes(matched.id)) participantIds.push(matched.id);
+    } else if (!missing.includes(name)) {
+      missing.push(name);
     }
+  }
+  if (missing.length > 0) {
+    warnings.push(`参与人「${missing.join('、')}」在系统中不存在，已忽略`);
   }
 
   return {
     rowNo: raw.rowNo,
     title,
-    module: (raw.module ?? '').trim(),
     assigneeName: assigneeName || null,
-    assigneeId,
+    assigneeId: assignee?.id ?? null,
+    participantNames: participantNames.filter((name) => !missing.includes(name)),
+    participantIds,
     priority: priority ?? Priority.P2,
     status: finalStatus,
     progress: finalProgress,
-    dueDate,
+    ...dates,
     description: (raw.description ?? '').trim() || null,
     errors,
     warnings,
   };
+}
+
+function matchUser(name: string, ctx: ImportContext): UserLookup | undefined {
+  return ctx.users.find(
+    (user) => user.username.toLowerCase() === name.toLowerCase() || user.displayName === name,
+  );
+}
+
+function readDate(value: string, label: string, warnings: string[]): string | null {
+  const rawDate = (value ?? '').toString().trim();
+  if (!rawDate) return null;
+  const normalized = normalizeDueDate(rawDate);
+  if (!normalized) warnings.push(`${label}「${value}」无法识别，已留空`);
+  return normalized;
 }
 
 export function normalizeDueDate(input: string): string | null {
@@ -153,4 +190,16 @@ export function excelSerialToDate(serial: number): string | null {
   const utcDays = Math.floor(serial - 25569); // 1970-01-01 的 Excel 序列号
   const date = new Date(utcDays * 86400 * 1000);
   return Number.isNaN(date.getTime()) ? null : formatDateOnly(date);
+}
+
+/** 校验「计划开始不晚于计划结束」这类常识性冲突，只提示不拦截 */
+export function checkDateOrder(row: ParsedImportRow): string[] {
+  const warnings: string[] = [];
+  if (row.plannedStartDate && row.plannedEndDate && row.plannedStartDate > row.plannedEndDate) {
+    warnings.push('计划开始日期晚于计划结束日期');
+  }
+  if (row.actualStartDate && row.actualEndDate && row.actualStartDate > row.actualEndDate) {
+    warnings.push('实际开始日期晚于实际结束日期');
+  }
+  return warnings;
 }

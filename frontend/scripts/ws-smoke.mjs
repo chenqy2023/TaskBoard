@@ -84,8 +84,8 @@ await new Promise((r) => setTimeout(r, 500));
 const taskCreated = await call('POST', '/tasks', token, {
   versionId,
   title: '实时同步验证任务',
-  module: '实时',
   priority: 'P1',
+  plannedEndDate: '2026-10-31',
 });
 check('通过接口新建任务', taskCreated.status === 201, `状态 ${taskCreated.status}`);
 

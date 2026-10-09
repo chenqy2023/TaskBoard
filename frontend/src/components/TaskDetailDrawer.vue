@@ -6,6 +6,7 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons-vue';
 import type { ActivityView, CommentView, TaskView } from '@/types';
@@ -13,10 +14,10 @@ import { commentsApi, tasksApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useAuthStore } from '@/stores/auth';
 import {
-  ACTIVITY_ACTION_LABELS,
   PRIORITY_LABELS,
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
+  activityTitle,
   describeActivityValue,
   priorityColor,
   progressColor,
@@ -153,16 +154,34 @@ function removeTask() {
               {{ PRIORITY_LABELS[task.priority] }}
             </span>
           </a-descriptions-item>
-          <a-descriptions-item label="模块">{{ task.module || '—' }}</a-descriptions-item>
+          <a-descriptions-item label="状态">
+            <a-tag :color="TASK_STATUS_COLORS[task.status]">{{ TASK_STATUS_LABELS[task.status] }}</a-tag>
+          </a-descriptions-item>
           <a-descriptions-item label="负责人">
             <UserOutlined />
             {{ task.assignee?.displayName ?? '未分配' }}
           </a-descriptions-item>
-          <a-descriptions-item label="截止日期">
-            <span :class="{ 'text-danger': task.overdue }">
+          <a-descriptions-item label="参与人">
+            <template v-if="task.participants.length">
+              <TeamOutlined />
+              {{ task.participants.map((item) => item.displayName).join('、') }}
+            </template>
+            <span v-else class="text-muted">无</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="计划开始 / 结束" :span="2">
+            <span class="date-pair">
               <ClockCircleOutlined />
-              {{ task.dueDate ?? '未设置' }}
-              <template v-if="task.overdue">（已逾期）</template>
+              {{ task.plannedStartDate ?? '未设置' }} ~
+              <span :class="{ 'text-danger': task.overdue }">
+                {{ task.plannedEndDate ?? '未设置' }}
+                <template v-if="task.overdue">（已逾期）</template>
+              </span>
+            </span>
+          </a-descriptions-item>
+          <a-descriptions-item label="实际开始 / 结束" :span="2">
+            <span class="date-pair">
+              <ClockCircleOutlined />
+              {{ task.actualStartDate ?? '未设置' }} ~ {{ task.actualEndDate ?? '未设置' }}
             </span>
           </a-descriptions-item>
           <a-descriptions-item label="创建人">{{ task.createdBy?.displayName ?? '—' }}</a-descriptions-item>
@@ -230,7 +249,7 @@ function removeTask() {
           <a-timeline-item v-for="item in activities" :key="item.id" :color="item.action === 'TASK_DELETED' ? 'red' : 'blue'">
             <div class="log-line">
               <b>{{ item.actor.displayName }}</b>
-              {{ ACTIVITY_ACTION_LABELS[item.action] ?? item.action }}
+              {{ activityTitle(item.action, item.field) }}
               <template v-if="item.field && item.field !== 'content' && item.field !== 'body'">
                 <span class="text-muted">
                   {{ describeActivityValue(item.field, item.fromValue) }}
@@ -255,6 +274,12 @@ function removeTask() {
   align-items: center;
   gap: 8px;
   padding-right: 24px;
+}
+
+.date-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .description {

@@ -3,7 +3,6 @@ import { ActivityAction, Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { RealtimeService } from '../realtime/realtime.service';
-import { clampProgress } from '../versions/version-summary';
 import { formatDateOnly, toDateOnly } from '../common/date.util';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
@@ -19,12 +18,14 @@ import {
   canModifyTask,
   diffToActivities,
   nextSortIndex,
+  normalizeProgress,
   reindexColumn,
   type TaskSnapshot,
 } from './task.rules';
 
 const TASK_INCLUDE = {
   assignee: { select: { id: true, displayName: true } },
+  participants: { select: { id: true, displayName: true } },
   createdBy: { select: { id: true, displayName: true } },
 } satisfies Prisma.TaskInclude;
 
@@ -35,12 +36,15 @@ export interface TaskView {
   versionId: string;
   title: string;
   description: string | null;
-  module: string;
   assignee: { id: string; displayName: string } | null;
+  participants: { id: string; displayName: string }[];
   priority: string;
   status: TaskStatus;
   progress: number;
-  dueDate: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  actualStartDate: string | null;
+  actualEndDate: string | null;
   overdue: boolean;
   sortIndex: number;
   completedAt: string | null;
@@ -93,18 +97,6 @@ export class TasksService {
     return tasks.map(toTaskView);
   }
 
-  /** 供筛选下拉使用：版本下出现过的模块 */
-  async listModules(versionId: string) {
-    await this.assertVersionExists(versionId);
-    const rows = await this.prisma.task.findMany({
-      where: { versionId, deletedAt: null, module: { not: '' } },
-      select: { module: true },
-      distinct: ['module'],
-      orderBy: { module: 'asc' },
-    });
-    return rows.map((row) => row.module);
-  }
-
   async findOne(id: string) {
     const task = await this.prisma.task.findFirst({
       where: { id, deletedAt: null },
@@ -117,6 +109,7 @@ export class TasksService {
   async create(dto: CreateTaskDto, actor: AuthUser) {
     await this.assertVersionExists(dto.versionId);
     if (dto.assigneeId) await this.assertUserExists(dto.assigneeId);
+    const participantIds = await this.resolveParticipantIds(dto.participantIds);
 
     const status = dto.status ?? TaskStatus.TODO;
     const aggregate = await this.prisma.task.aggregate({
@@ -125,8 +118,7 @@ export class TasksService {
     });
 
     // 创建时若直接标为已完成，进度强制 100%，与状态联动规则保持一致
-    const progress =
-      status === TaskStatus.DONE ? 100 : clampProgress(dto.progress ?? 0);
+    const progress = status === TaskStatus.DONE ? 100 : normalizeProgress(dto.progress ?? 0);
 
     const task = await this.prisma.$transaction(async (tx) => {
       const created = await tx.task.create({
@@ -134,12 +126,15 @@ export class TasksService {
           versionId: dto.versionId,
           title: dto.title.trim(),
           description: dto.description ?? null,
-          module: dto.module?.trim() ?? '',
           assigneeId: dto.assigneeId ?? null,
+          participants: { connect: participantIds.map((id) => ({ id })) },
           priority: dto.priority,
           status,
           progress,
-          dueDate: toDateOnly(dto.dueDate),
+          plannedStartDate: toDateOnly(dto.plannedStartDate),
+          plannedEndDate: toDateOnly(dto.plannedEndDate),
+          actualStartDate: toDateOnly(dto.actualStartDate),
+          actualEndDate: toDateOnly(dto.actualEndDate),
           completedAt: status === TaskStatus.DONE ? new Date() : null,
           sortIndex: nextSortIndex(aggregate._max.sortIndex),
           createdById: actor.id,
@@ -157,14 +152,26 @@ export class TasksService {
         },
         tx,
       );
-      if (created.assigneeId) {
+      if (created.assignee) {
         await this.activities.record(
           {
             taskId: created.id,
             actorId: actor.id,
             action: ActivityAction.ASSIGNEE_CHANGED,
             field: 'assigneeId',
-            toValue: created.assigneeId,
+            toValue: created.assignee.displayName,
+          },
+          tx,
+        );
+      }
+      if (created.participants.length > 0) {
+        await this.activities.record(
+          {
+            taskId: created.id,
+            actorId: actor.id,
+            action: ActivityAction.PARTICIPANTS_CHANGED,
+            field: 'participants',
+            toValue: created.participants.map((item) => item.displayName).join('、'),
           },
           tx,
         );
@@ -182,23 +189,32 @@ export class TasksService {
     this.assertCanModify(current, actor);
 
     if (dto.assigneeId) await this.assertUserExists(dto.assigneeId);
+    const participantIds =
+      dto.participantIds !== undefined ? await this.resolveParticipantIds(dto.participantIds) : undefined;
 
-    const before: TaskSnapshot = snapshot(current);
+    const before = snapshot(current);
     const nextStatus = dto.status ?? current.status;
     const transition = applyStatusTransition(
       { status: current.status, progress: current.progress, completedAt: current.completedAt },
       nextStatus,
     );
 
-    const progress =
-      dto.progress !== undefined ? clampProgress(dto.progress) : transition.progress;
+    const progress = dto.progress !== undefined ? normalizeProgress(dto.progress) : transition.progress;
 
     const after: TaskSnapshot = {
+      ...before,
       status: nextStatus,
       progress,
       assigneeId: dto.assigneeId !== undefined ? dto.assigneeId : current.assigneeId,
       priority: dto.priority ?? current.priority,
-      dueDate: dto.dueDate !== undefined ? toDateOnly(dto.dueDate) : current.dueDate,
+      plannedStartDate:
+        dto.plannedStartDate !== undefined ? toDateOnly(dto.plannedStartDate) : current.plannedStartDate,
+      plannedEndDate:
+        dto.plannedEndDate !== undefined ? toDateOnly(dto.plannedEndDate) : current.plannedEndDate,
+      actualStartDate:
+        dto.actualStartDate !== undefined ? toDateOnly(dto.actualStartDate) : current.actualStartDate,
+      actualEndDate:
+        dto.actualEndDate !== undefined ? toDateOnly(dto.actualEndDate) : current.actualEndDate,
     };
 
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -207,21 +223,28 @@ export class TasksService {
         data: {
           title: dto.title?.trim(),
           description: dto.description,
-          module: dto.module?.trim(),
           assigneeId: dto.assigneeId,
+          ...(participantIds !== undefined
+            ? { participants: { set: participantIds.map((pid) => ({ id: pid })) } }
+            : {}),
           priority: dto.priority,
           status: nextStatus,
           progress,
-          dueDate: after.dueDate,
+          plannedStartDate: after.plannedStartDate,
+          plannedEndDate: after.plannedEndDate,
+          actualStartDate: after.actualStartDate,
+          actualEndDate: after.actualEndDate,
           completedAt: transition.completedAt,
         },
         include: TASK_INCLUDE,
       });
 
-      const logs = diffToActivities(before, after, actor.id).map((log) => ({ ...log, taskId: id }));
+      // 参与人姓名要用更新后的结果回填，否则新加的人日志里只有 id
+      const finalAfter: TaskSnapshot = { ...after, participants: snapshot(saved).participants };
+      const logs = diffToActivities(before, finalAfter, actor.id).map((log) => ({ ...log, taskId: id }));
+
       const textChanged =
         (dto.title !== undefined && dto.title.trim() !== current.title) ||
-        (dto.module !== undefined && dto.module.trim() !== current.module) ||
         (dto.description !== undefined && (dto.description ?? null) !== current.description);
 
       if (textChanged) {
@@ -310,27 +333,28 @@ export class TasksService {
         nextStatus,
       );
       const after: TaskSnapshot = {
+        ...before,
         status: nextStatus,
         progress: transition.progress,
         assigneeId: dto.assigneeId !== undefined ? dto.assigneeId : task.assigneeId,
         priority: dto.priority ?? task.priority,
-        dueDate: dto.dueDate !== undefined ? toDateOnly(dto.dueDate) : task.dueDate,
       };
 
       await this.prisma.$transaction(async (tx) => {
-        await tx.task.update({
+        const saved = await tx.task.update({
           where: { id: task.id },
           data: {
             assigneeId: after.assigneeId,
             priority: after.priority,
             status: nextStatus,
             progress: after.progress,
-            dueDate: after.dueDate,
             completedAt: transition.completedAt,
           },
+          include: TASK_INCLUDE,
         });
+        const finalAfter: TaskSnapshot = { ...after, participants: snapshot(saved).participants };
         await this.activities.recordMany(
-          diffToActivities(before, after, actor.id).map((log) => ({ ...log, taskId: task.id })),
+          diffToActivities(before, finalAfter, actor.id).map((log) => ({ ...log, taskId: task.id })),
           tx,
         );
       });
@@ -372,16 +396,22 @@ export class TasksService {
     return { success: true };
   }
 
+  /** 我的待办：我负责的 + 我参与的，都还没完成 */
   async myTasks(actor: AuthUser, limit = 50) {
     const tasks = await this.prisma.task.findMany({
-      where: { assigneeId: actor.id, deletedAt: null, status: { not: TaskStatus.DONE } },
+      where: {
+        deletedAt: null,
+        status: { not: TaskStatus.DONE },
+        OR: [{ assigneeId: actor.id }, { participants: { some: { id: actor.id } } }],
+      },
       include: { ...TASK_INCLUDE, version: { select: { id: true, name: true } } },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ plannedEndDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
       take: limit,
     });
     return tasks.map((task) => ({
       ...toTaskView(task),
       version: { id: task.version.id, name: task.version.name },
+      isAssignee: task.assigneeId === actor.id,
     }));
   }
 
@@ -389,7 +419,7 @@ export class TasksService {
     const where: Prisma.TaskWhereInput = { versionId, deletedAt: null };
     if (query.status) where.status = query.status;
     if (query.priority) where.priority = query.priority;
-    if (query.module) where.module = query.module;
+    if (query.participantId) where.participants = { some: { id: query.participantId } };
 
     if (query.assigneeId === 'unassigned') {
       where.assigneeId = null;
@@ -412,9 +442,9 @@ export class TasksService {
     switch (query.sortBy) {
       case 'createdAt':
         return [{ createdAt: order }];
-      case 'dueDate':
-        // 未设截止日期的排在最后，避免空值挤在最前
-        return [{ dueDate: { sort: order, nulls: 'last' } }];
+      case 'plannedEndDate':
+        // 未设计划结束日期的排在最后，避免空值挤在最前
+        return [{ plannedEndDate: { sort: order, nulls: 'last' } }];
       case 'priority':
         return [{ priority: order }, { sortIndex: 'asc' }];
       case 'progress':
@@ -439,6 +469,20 @@ export class TasksService {
     if (!user) throw new BadRequestException('指定的负责人不存在');
   }
 
+  /** 参与人去重并校验存在性，避免把脏 id 写进关联表 */
+  private async resolveParticipantIds(ids: string[] | undefined): Promise<string[]> {
+    if (!ids || ids.length === 0) return [];
+    const unique = [...new Set(ids.filter(Boolean))];
+    const found = await this.prisma.user.findMany({
+      where: { id: { in: unique } },
+      select: { id: true },
+    });
+    if (found.length !== unique.length) {
+      throw new BadRequestException('参与人中有不存在的成员，请刷新页面后重试');
+    }
+    return unique;
+  }
+
   private async getOrThrow(id: string): Promise<TaskWithRelations> {
     const task = await this.prisma.task.findFirst({
       where: { id, deletedAt: null },
@@ -448,23 +492,19 @@ export class TasksService {
     return task;
   }
 
-  private assertCanModify(task: { createdById: string; assigneeId: string | null }, actor: AuthUser) {
-    if (!canModifyTask(task, actor)) {
-      throw new ForbiddenException('只能修改自己创建或自己负责的任务');
+  private assertCanModify(task: TaskWithRelations, actor: AuthUser) {
+    if (!canModifyTask(toOwnership(task), actor)) {
+      throw new ForbiddenException('只能修改自己创建、自己负责或自己参与的任务');
     }
   }
 
-  private assertCanDelete(task: { createdById: string; assigneeId: string | null }, actor: AuthUser) {
-    if (!canDeleteTask(task, actor)) {
+  private assertCanDelete(task: TaskWithRelations, actor: AuthUser) {
+    if (!canDeleteTask(toOwnership(task), actor)) {
       throw new ForbiddenException('只有任务创建者或管理员可以删除任务');
     }
   }
 
-  private emit(
-    actor: AuthUser,
-    event: string,
-    task: TaskWithRelations,
-  ) {
+  private emit(actor: AuthUser, event: string, task: TaskWithRelations) {
     return this.realtime.emitToVersion(task.versionId, event, {
       versionId: task.versionId,
       task: toTaskView(task),
@@ -473,28 +513,48 @@ export class TasksService {
   }
 }
 
+function toOwnership(task: TaskWithRelations) {
+  return {
+    createdById: task.createdById,
+    assigneeId: task.assigneeId,
+    participantIds: task.participants.map((item) => item.id),
+  };
+}
+
 export function snapshot(task: {
   status: TaskStatus;
   progress: number;
   assigneeId: string | null;
+  participants: { id: string; displayName: string }[];
   priority: TaskSnapshot['priority'];
-  dueDate: Date | null;
+  plannedStartDate: Date | null;
+  plannedEndDate: Date | null;
+  actualStartDate: Date | null;
+  actualEndDate: Date | null;
 }): TaskSnapshot {
   return {
     status: task.status,
     progress: task.progress,
     assigneeId: task.assigneeId,
+    participants: task.participants.map((item) => ({ id: item.id, displayName: item.displayName })),
     priority: task.priority,
-    dueDate: task.dueDate,
+    plannedStartDate: task.plannedStartDate,
+    plannedEndDate: task.plannedEndDate,
+    actualStartDate: task.actualStartDate,
+    actualEndDate: task.actualEndDate,
   };
 }
 
-/** 逾期判断：有截止日期、已过期、且未完成 */
-export function isOverdue(dueDate: Date | null, status: TaskStatus, today = new Date()): boolean {
-  if (!dueDate || status === TaskStatus.DONE) return false;
-  const due = formatDateOnly(dueDate);
+/** 逾期判断：有计划结束日期、已过期、且未完成 */
+export function isOverdue(
+  plannedEndDate: Date | null,
+  status: TaskStatus,
+  today = new Date(),
+): boolean {
+  if (!plannedEndDate || status === TaskStatus.DONE) return false;
+  const planned = formatDateOnly(plannedEndDate);
   const now = formatDateOnly(today);
-  return !!due && !!now && due < now;
+  return !!planned && !!now && planned < now;
 }
 
 export function toTaskView(task: TaskWithRelations): TaskView {
@@ -503,13 +563,16 @@ export function toTaskView(task: TaskWithRelations): TaskView {
     versionId: task.versionId,
     title: task.title,
     description: task.description,
-    module: task.module,
     assignee: task.assignee ? { id: task.assignee.id, displayName: task.assignee.displayName } : null,
+    participants: task.participants.map((item) => ({ id: item.id, displayName: item.displayName })),
     priority: task.priority,
     status: task.status,
     progress: task.progress,
-    dueDate: formatDateOnly(task.dueDate),
-    overdue: isOverdue(task.dueDate, task.status),
+    plannedStartDate: formatDateOnly(task.plannedStartDate),
+    plannedEndDate: formatDateOnly(task.plannedEndDate),
+    actualStartDate: formatDateOnly(task.actualStartDate),
+    actualEndDate: formatDateOnly(task.actualEndDate),
+    overdue: isOverdue(task.plannedEndDate, task.status),
     sortIndex: task.sortIndex,
     completedAt: task.completedAt ? task.completedAt.toISOString() : null,
     createdBy: task.createdBy

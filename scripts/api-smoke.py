@@ -177,23 +177,60 @@ def main():
         )
     check("成员账号可用", bool(member))
 
-    # ---------- 4. 任务与中文编码 ----------
-    print("\n4) 任务与中文编码")
+    # ---------- 4. 任务字段与中文编码 ----------
+    print("\n4) 任务字段与中文编码")
     specs = [
-        {"title": "登录模块功能测试", "module": "登录鉴权", "priority": "P1", "progress": 60},
-        {"title": "权限越权测试", "module": "权限", "priority": "P0", "progress": 30},
-        {"title": "兼容性回归", "module": "兼容性", "priority": "P3", "progress": 100},
+        {
+            "title": "登录模块功能测试",
+            "priority": "P1",
+            "progress": 60,
+            "plannedStartDate": "2026-10-01",
+            "plannedEndDate": "2026-10-20",
+            "actualStartDate": "2026-10-02",
+            "participantIds": [member["id"]],
+        },
+        {"title": "权限越权测试", "priority": "P0", "progress": 30, "plannedEndDate": "2026-10-05"},
+        {"title": "兼容性回归", "priority": "P3", "progress": 100, "plannedEndDate": "2026-10-30"},
     ]
     created = [
         call(base, "POST", "/tasks", token=token, body={**spec, "versionId": vid}, expect=201)[1]
         for spec in specs
     ]
+    check("中文标题原样落库", created[0]["title"] == "登录模块功能测试", f"实际 {created[0]['title']!r}")
     check(
-        "中文标题/模块原样落库",
-        created[0]["title"] == "登录模块功能测试" and created[0]["module"] == "登录鉴权",
-        f"实际 {created[0]['title']!r} / {created[0]['module']!r}",
+        "参与人多选已保存",
+        [p["displayName"] for p in created[0]["participants"]] == ["冒烟测试员"],
+        f"实际 {created[0]['participants']}",
+    )
+    check(
+        "四个日期按 YYYY-MM-DD 存取",
+        created[0]["plannedStartDate"] == "2026-10-01"
+        and created[0]["plannedEndDate"] == "2026-10-20"
+        and created[0]["actualStartDate"] == "2026-10-02"
+        and created[0]["actualEndDate"] is None,
+        f"实际 {created[0]['plannedStartDate']} / {created[0]['plannedEndDate']} / {created[0]['actualStartDate']}",
     )
     check("同列内 sortIndex 递增", [t["sortIndex"] for t in created] == [0, 1, 2], f"实际 {[t['sortIndex'] for t in created]}")
+    check(
+        "计划结束日期已过且未完成 -> 逾期",
+        created[1]["overdue"] is True and created[2]["overdue"] is False,
+        f"实际 {created[1]['overdue']} / {created[2]['overdue']}",
+    )
+
+    status, err = call(
+        base, "POST", "/tasks", token=token,
+        body={"versionId": vid, "title": "进度非整数", "progress": 60.5},
+    )
+    check("进度拒绝非整数 (400)", status == 400, f"实际 {status} {err}")
+
+    status, err = call(
+        base, "POST", "/tasks", token=token,
+        body={"versionId": vid, "title": "进度越界", "progress": 101},
+    )
+    check("进度拒绝越界值 (400)", status == 400, f"实际 {status} {err}")
+
+    _, filtered = call(base, "GET", f"/versions/{vid}/tasks?participantId={member['id']}", token=token)
+    check("可按参与人筛选", filtered["total"] == 1, f"实际 {filtered['total']}")
 
     _, summary = call(base, "GET", f"/versions/{vid}/summary", token=token)
     check("平均进度 = (60+30+100)/3 ≈ 63", summary["avgProgress"] == 63, f"实际 {summary['avgProgress']}")
@@ -226,10 +263,16 @@ def main():
     check("成员可登录", bool(mtoken))
 
     status, _ = call(base, "PATCH", f"/tasks/{created[0]['id']}", token=mtoken, body={"progress": 10})
-    check("成员不能改他人任务 (403)", status == 403, f"实际 {status}")
+    check("参与人可以改自己参与的任务 (200)", status == 200, f"实际 {status}")
+
+    status, _ = call(base, "PATCH", f"/tasks/{created[1]['id']}", token=mtoken, body={"progress": 10})
+    check("与自己无关的任务不能改 (403)", status == 403, f"实际 {status}")
 
     status, _ = call(base, "DELETE", f"/tasks/{created[0]['id']}", token=mtoken)
-    check("成员不能删他人任务 (403)", status == 403, f"实际 {status}")
+    check("参与人不能删他人创建的任务 (403)", status == 403, f"实际 {status}")
+
+    status, _ = call(base, "DELETE", f"/tasks/{created[1]['id']}", token=mtoken)
+    check("无关任务也不能删 (403)", status == 403, f"实际 {status}")
 
     status, _ = call(
         base, "POST", "/users", token=mtoken,
@@ -259,8 +302,9 @@ def main():
     print("\n8) 统计")
     _, stats = call(base, "GET", f"/stats/versions/{vid}", token=token)
     check("按状态聚合总数正确", sum(x["count"] for x in stats["byStatus"]) == 3)
-    check("按模块聚合得到 3 组", len(stats["byModule"]) == 3, f"实际 {[m['label'] for m in stats['byModule']]}")
+    check("按优先级聚合总数正确", sum(x["count"] for x in stats["byPriority"]) == 3)
     check("含未分配分组", any(a["label"] == "未分配" for a in stats["byAssignee"]))
+    check("统计已不含模块维度", "byModule" not in stats, f"实际字段 {list(stats)}")
 
     # ---------- 9. 导出 / 导入往返 ----------
     print("\n9) Excel 导出与导入往返")
@@ -272,6 +316,9 @@ def main():
     if status == 201:
         check("预览无错误行", preview["errorCount"] == 0, f"实际 {preview['errorCount']}")
         check("预览识别出 3 行", preview["validCount"] == 3, f"实际 {preview['validCount']}")
+
+        participants_ok = any(row["parsed"]["participantNames"] for row in preview["rows"])
+        check("导出的参与人可被回传识别", participants_ok)
 
         raw_rows = [row["raw"] for row in preview["rows"] if not row["parsed"]["errors"]]
         status, confirmed = call(

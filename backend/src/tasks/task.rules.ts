@@ -1,15 +1,24 @@
 import { ActivityAction, Priority, TaskStatus } from '@prisma/client';
-import { PROGRESS_LOG_THRESHOLD } from '../common/constants';
+import { DATE_FIELDS, PROGRESS_LOG_THRESHOLD, type DateField } from '../common/constants';
 import { formatDateOnly } from '../common/date.util';
 import { clampProgress } from '../versions/version-summary';
 import type { ActivityInput } from '../activities/activities.service';
+
+export interface ParticipantLike {
+  id: string;
+  displayName: string;
+}
 
 export interface TaskSnapshot {
   status: TaskStatus;
   progress: number;
   assigneeId: string | null;
+  participants: ParticipantLike[];
   priority: Priority;
-  dueDate: Date | null;
+  plannedStartDate: Date | null;
+  plannedEndDate: Date | null;
+  actualStartDate: Date | null;
+  actualEndDate: Date | null;
 }
 
 export interface ActorLike {
@@ -20,6 +29,7 @@ export interface ActorLike {
 export interface TaskOwnership {
   createdById: string;
   assigneeId: string | null;
+  participantIds?: string[];
 }
 
 /**
@@ -43,19 +53,33 @@ export function applyStatusTransition(
 }
 
 /**
- * 编辑权限：管理员可改任意任务；成员只能改自己创建或自己负责的任务。
- * 只读校验（能否查看）不在此处，看板对全员开放。
+ * 编辑权限：管理员可改任意任务；成员可以改自己创建、自己负责或自己参与的任务。
+ * 参与人视同参与者，理应能更新自己参与的这条任务。
  */
 export function canModifyTask(task: TaskOwnership, actor: ActorLike): boolean {
   if (actor.role === 'ADMIN') return true;
   if (task.createdById === actor.id) return true;
-  return task.assigneeId === actor.id;
+  if (task.assigneeId === actor.id) return true;
+  return (task.participantIds ?? []).includes(actor.id);
 }
 
 /** 只有管理员或任务创建者可以删除任务 */
 export function canDeleteTask(task: TaskOwnership, actor: ActorLike): boolean {
   if (actor.role === 'ADMIN') return true;
   return task.createdById === actor.id;
+}
+
+/** 四个日期字段的变更日志：统一用 DUE_DATE_CHANGED，靠 field 区分是哪一个 */
+function diffDateFields(before: TaskSnapshot, after: TaskSnapshot, actorId: string): ActivityInput[] {
+  const logs: ActivityInput[] = [];
+  for (const field of DATE_FIELDS) {
+    const fromValue = formatDateOnly(before[field]);
+    const toValue = formatDateOnly(after[field]);
+    if (fromValue !== toValue) {
+      logs.push({ taskId: '', actorId, action: ActivityAction.DUE_DATE_CHANGED, field, fromValue, toValue });
+    }
+  }
+  return logs;
 }
 
 /**
@@ -81,15 +105,29 @@ export function diffToActivities(
   if (before.assigneeId !== after.assigneeId) {
     push(ActivityAction.ASSIGNEE_CHANGED, 'assigneeId', before.assigneeId, after.assigneeId);
   }
+
+  const beforeParticipants = [...before.participants].map((item) => item.id).sort();
+  const afterParticipants = [...after.participants].map((item) => item.id).sort();
+  if (beforeParticipants.join(',') !== afterParticipants.join(',')) {
+    // 日志里存姓名而不是 id，便于直接阅读；按拼音排序保证同一批人每次顺序一致
+    const joinNames = (list: ParticipantLike[]) =>
+      [...list]
+        .map((item) => item.displayName)
+        .sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+        .join('、') || null;
+    push(
+      ActivityAction.PARTICIPANTS_CHANGED,
+      'participants',
+      joinNames(before.participants),
+      joinNames(after.participants),
+    );
+  }
+
   if (before.priority !== after.priority) {
     push(ActivityAction.PRIORITY_CHANGED, 'priority', before.priority, after.priority);
   }
 
-  const beforeDue = formatDateOnly(before.dueDate);
-  const afterDue = formatDateOnly(after.dueDate);
-  if (beforeDue !== afterDue) {
-    push(ActivityAction.DUE_DATE_CHANGED, 'dueDate', beforeDue, afterDue);
-  }
+  logs.push(...diffDateFields(before, after, actorId));
 
   const progressDelta = Math.abs(after.progress - before.progress);
   if (progressDelta >= PROGRESS_LOG_THRESHOLD) {
@@ -124,4 +162,14 @@ export function reindexColumn(
   return next.map((id, i) => ({ id, sortIndex: i }));
 }
 
+/**
+ * 进度只接受 0-100 的整数：非数字按 0，小数四舍五入，越界夹到边界。
+ */
+export function normalizeProgress(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value ?? '').trim());
+  if (!Number.isFinite(parsed)) return 0;
+  return clampProgress(parsed);
+}
+
 export { clampProgress };
+export type { DateField };

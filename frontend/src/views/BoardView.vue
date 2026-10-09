@@ -33,7 +33,6 @@ const columns = reactive<Record<TaskStatus, TaskView[]>>({
   DONE: [],
 });
 const users = ref<User[]>([]);
-const modules = ref<string[]>([]);
 const filters = ref<TaskFilters>({ keyword: '' });
 const loading = ref(false);
 
@@ -53,17 +52,15 @@ async function loadAll() {
   if (!id) return;
   loading.value = true;
   try {
-    const [versionData, summaryData, boardTasks, userList, moduleList] = await Promise.all([
+    const [versionData, summaryData, boardTasks, userList] = await Promise.all([
       versionsApi.get(id),
       versionsApi.summary(id),
       tasksApi.board(id, filters.value),
       usersApi.list(),
-      tasksApi.modules(id),
     ]);
     version.value = versionData;
     summary.value = summaryData;
     users.value = userList;
-    modules.value = moduleList;
 
     for (const status of TASK_STATUS_ORDER) columns[status] = [];
     for (const task of boardTasks) columns[task.status].push(task);
@@ -81,13 +78,11 @@ async function loadAll() {
 
 async function loadTasksAndSummary() {
   const id = versionId.value;
-  const [summaryData, boardTasks, moduleList] = await Promise.all([
+  const [summaryData, boardTasks] = await Promise.all([
     versionsApi.summary(id),
     tasksApi.board(id, filters.value),
-    tasksApi.modules(id),
   ]);
   summary.value = summaryData;
-  modules.value = moduleList;
   for (const status of TASK_STATUS_ORDER) columns[status] = [];
   for (const task of boardTasks) columns[task.status].push(task);
 }
@@ -185,7 +180,7 @@ onMounted(loadAll);
     </a-card>
 
     <div class="toolbar board-toolbar">
-      <FilterBar v-model:filters="filters" :users="users" :modules="modules" />
+      <FilterBar v-model:filters="filters" :users="users" />
       <div class="toolbar-right">
         <a-button size="small" :loading="loading" @click="loadAll">
           <ReloadOutlined />
@@ -248,7 +243,6 @@ onMounted(loadAll);
       :version-id="versionId"
       :task="editingTask"
       :users="users"
-      :modules="modules"
       :default-status="defaultStatus"
       @saved="loadTasksAndSummary"
     />

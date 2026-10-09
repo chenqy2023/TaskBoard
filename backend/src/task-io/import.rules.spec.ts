@@ -1,8 +1,10 @@
 import { Priority, TaskStatus } from '@prisma/client';
 import {
+  checkDateOrder,
   excelSerialToDate,
   normalizeDueDate,
   parseImportRow,
+  splitNames,
   type ImportContext,
   type RawImportRow,
 } from './import.rules';
@@ -11,6 +13,7 @@ const ctx: ImportContext = {
   users: [
     { id: 'u1', username: 'zhangsan', displayName: '张三' },
     { id: 'u2', username: 'lisi', displayName: '李四' },
+    { id: 'u3', username: 'wangwu', displayName: '王五' },
   ],
 };
 
@@ -18,12 +21,15 @@ function row(partial: Partial<RawImportRow>): RawImportRow {
   return {
     rowNo: 2,
     title: '',
-    module: '',
     assignee: '',
+    participants: '',
     priority: '',
     status: '',
     progress: '',
-    dueDate: '',
+    plannedStartDate: '',
+    plannedEndDate: '',
+    actualStartDate: '',
+    actualEndDate: '',
     description: '',
     ...partial,
   };
@@ -31,31 +37,35 @@ function row(partial: Partial<RawImportRow>): RawImportRow {
 
 describe('Excel 导入行校验', () => {
   it('标题为空算错误，该行不会导入', () => {
-    const parsed = parseImportRow(row({ title: '   ' }), ctx);
-
-    expect(parsed.errors).toContain('标题不能为空');
+    expect(parseImportRow(row({ title: '   ' }), ctx).errors).toContain('标题不能为空');
   });
 
   it('正常行解析出各字段', () => {
     const parsed = parseImportRow(
       row({
         title: '登录模块功能测试',
-        module: '登录鉴权',
         assignee: '张三',
+        participants: '李四、王五',
         priority: 'P1 高',
         status: '进行中',
         progress: '60',
-        dueDate: '2026/10/20',
+        plannedStartDate: '2026/10/01',
+        plannedEndDate: '2026/10/20',
+        actualStartDate: '2026-10-02',
       }),
       ctx,
     );
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.assigneeId).toBe('u1');
+    expect(parsed.participantIds).toEqual(['u2', 'u3']);
     expect(parsed.priority).toBe(Priority.P1);
     expect(parsed.status).toBe(TaskStatus.IN_PROGRESS);
     expect(parsed.progress).toBe(60);
-    expect(parsed.dueDate).toBe('2026-10-20');
+    expect(parsed.plannedStartDate).toBe('2026-10-01');
+    expect(parsed.plannedEndDate).toBe('2026-10-20');
+    expect(parsed.actualStartDate).toBe('2026-10-02');
+    expect(parsed.actualEndDate).toBeNull();
   });
 
   it('负责人可用登录账号匹配', () => {
@@ -63,11 +73,25 @@ describe('Excel 导入行校验', () => {
   });
 
   it('负责人不存在时只警告并留空，不阻断导入', () => {
-    const parsed = parseImportRow(row({ title: 't', assignee: '王五' }), ctx);
+    const parsed = parseImportRow(row({ title: 't', assignee: '赵六' }), ctx);
 
     expect(parsed.errors).toEqual([]);
     expect(parsed.assigneeId).toBeNull();
-    expect(parsed.warnings.join()).toContain('王五');
+    expect(parsed.warnings.join()).toContain('赵六');
+  });
+
+  it('参与人不存在时忽略该名字并给出警告', () => {
+    const parsed = parseImportRow(row({ title: 't', participants: '李四、赵六' }), ctx);
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.participantIds).toEqual(['u2']);
+    expect(parsed.warnings.join()).toContain('赵六');
+  });
+
+  it('重复的参与人只保留一个', () => {
+    const parsed = parseImportRow(row({ title: 't', participants: '李四 李四 lisi' }), ctx);
+
+    expect(parsed.participantIds).toEqual(['u2']);
   });
 
   it('优先级/状态无法识别时用默认值兜底并给出警告', () => {
@@ -93,10 +117,15 @@ describe('Excel 导入行校验', () => {
   });
 
   it('进度超出范围时截断', () => {
-    const parsed = parseImportRow(row({ title: 't', progress: '180' }), ctx);
+    expect(parseImportRow(row({ title: 't', progress: '180' }), ctx).progress).toBe(100);
+    expect(parseImportRow(row({ title: 't', progress: '-10' }), ctx).progress).toBe(0);
+  });
 
-    expect(parsed.progress).toBe(100);
-    expect(parsed.warnings.join()).toContain('截断');
+  it('进度是小数时四舍五入并提示', () => {
+    const parsed = parseImportRow(row({ title: 't', progress: '66.4' }), ctx);
+
+    expect(parsed.progress).toBe(66);
+    expect(parsed.warnings.join()).toContain('整数');
   });
 
   it('带百分号的进度可以识别', () => {
@@ -104,10 +133,43 @@ describe('Excel 导入行校验', () => {
   });
 
   it('日期无法识别时留空并提示', () => {
-    const parsed = parseImportRow(row({ title: 't', dueDate: '下周三' }), ctx);
+    const parsed = parseImportRow(row({ title: 't', plannedEndDate: '下周三' }), ctx);
 
-    expect(parsed.dueDate).toBeNull();
-    expect(parsed.warnings.join()).toContain('无法识别');
+    expect(parsed.plannedEndDate).toBeNull();
+    expect(parsed.warnings.join()).toContain('计划结束日期');
+  });
+
+  it('计划开始晚于计划结束时给出提示', () => {
+    const parsed = parseImportRow(
+      row({ title: 't', plannedStartDate: '2026-10-20', plannedEndDate: '2026-10-01' }),
+      ctx,
+    );
+
+    expect(checkDateOrder(parsed)).toContain('计划开始日期晚于计划结束日期');
+  });
+
+  it('日期顺序正常时不给提示', () => {
+    const parsed = parseImportRow(
+      row({ title: 't', plannedStartDate: '2026-10-01', plannedEndDate: '2026-10-20' }),
+      ctx,
+    );
+
+    expect(checkDateOrder(parsed)).toEqual([]);
+  });
+});
+
+describe('参与人拆分', () => {
+  it.each([
+    ['李四、王五', ['李四', '王五']],
+    ['李四,王五', ['李四', '王五']],
+    ['李四，王五', ['李四', '王五']],
+    ['李四;王五', ['李四', '王五']],
+    ['李四/王五', ['李四', '王五']],
+    ['李四 王五', ['李四', '王五']],
+    ['  李四  、  王五  ', ['李四', '王五']],
+    ['', []],
+  ])('%s -> %j', (input, expected) => {
+    expect(splitNames(input)).toEqual(expected);
   });
 });
 

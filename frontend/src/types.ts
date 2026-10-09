@@ -39,12 +39,15 @@ export interface TaskView {
   versionId: string;
   title: string;
   description: string | null;
-  module: string;
   assignee: { id: string; displayName: string } | null;
+  participants: { id: string; displayName: string }[];
   priority: Priority;
   status: TaskStatus;
   progress: number;
-  dueDate: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  actualStartDate: string | null;
+  actualEndDate: string | null;
   overdue: boolean;
   sortIndex: number;
   completedAt: string | null;
@@ -53,6 +56,8 @@ export interface TaskView {
   updatedAt: string;
   /** 仅「我的待办」接口返回 */
   version?: { id: string; name: string };
+  /** 仅「我的待办」接口返回：true 表示我是负责人，否则我是参与人 */
+  isAssignee?: boolean;
 }
 
 export interface CommentView {
@@ -88,14 +93,13 @@ export interface VersionStats {
   byStatus: { status: TaskStatus; label: string; count: number }[];
   byPriority: { priority: Priority; label: string; count: number }[];
   byAssignee: BucketStats[];
-  byModule: BucketStats[];
 }
 
 export interface TaskQuery {
   status?: TaskStatus;
   assigneeId?: string;
+  participantId?: string;
   priority?: Priority;
-  module?: string;
   keyword?: string;
   page?: number;
   pageSize?: number;
@@ -107,8 +111,8 @@ export interface TaskQuery {
 export interface TaskFilters {
   keyword: string;
   assigneeId?: string;
+  participantId?: string;
   priority?: Priority;
-  module?: string;
   status?: TaskStatus;
 }
 
@@ -122,25 +126,32 @@ export interface Paginated<T> {
 export interface RawImportRow {
   rowNo: number;
   title: string;
-  module?: string;
   assignee?: string;
+  participants?: string;
   priority?: string;
   status?: string;
   progress?: string;
-  dueDate?: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
   description?: string;
 }
 
 export interface ParsedImportRow {
   rowNo: number;
   title: string;
-  module: string;
   assigneeName: string | null;
   assigneeId: string | null;
+  participantNames: string[];
+  participantIds: string[];
   priority: Priority;
   status: TaskStatus;
   progress: number;
-  dueDate: string | null;
+  plannedStartDate: string | null;
+  plannedEndDate: string | null;
+  actualStartDate: string | null;
+  actualEndDate: string | null;
   description: string | null;
   errors: string[];
   warnings: string[];

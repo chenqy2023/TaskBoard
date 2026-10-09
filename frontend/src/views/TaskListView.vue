@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
-import dayjs from 'dayjs';
 import type { Priority, TaskFilters, TaskStatus, TaskView, User, VersionView } from '@/types';
 import { taskIoApi, tasksApi, usersApi, versionsApi } from '@/api';
 import { errorText } from '@/api/http';
@@ -29,7 +28,6 @@ const version = ref<VersionView | null>(null);
 const items = ref<TaskView[]>([]);
 const total = ref(0);
 const users = ref<User[]>([]);
-const modules = ref<string[]>([]);
 const loading = ref(false);
 const selectedKeys = ref<string[]>([]);
 
@@ -48,14 +46,20 @@ const batchForm = ref<{ assigneeId?: string | null; priority?: Priority; status?
 
 const selectedTasks = computed(() => items.value.filter((task) => selectedKeys.value.includes(task.id)));
 
+function participantText(task: TaskView) {
+  return task.participants.map((item) => item.displayName).join('、');
+}
+
 const columns = [
-  { title: '标题', key: 'title', width: 260, sorter: true },
-  { title: '模块', key: 'module', width: 110 },
+  { title: '标题', key: 'title', dataIndex: 'title', width: 240, sorter: true },
   { title: '负责人', key: 'assignee', width: 110 },
-  { title: '优先级', key: 'priority', width: 100, sorter: true },
-  { title: '状态', key: 'status', width: 100, sorter: true },
-  { title: '进度', key: 'progress', width: 140, sorter: true },
-  { title: '截止日期', key: 'dueDate', width: 120, sorter: true },
+  { title: '参与人', key: 'participants', width: 130 },
+  { title: '优先级', key: 'priority', dataIndex: 'priority', width: 100, sorter: true },
+  { title: '状态', key: 'status', dataIndex: 'status', width: 100, sorter: true },
+  { title: '进度', key: 'progress', dataIndex: 'progress', width: 130, sorter: true },
+  { title: '计划开始', key: 'plannedStartDate', width: 110 },
+  { title: '计划结束', key: 'plannedEndDate', dataIndex: 'plannedEndDate', width: 120, sorter: true },
+  { title: '实际结束', key: 'actualEndDate', width: 110 },
   { title: '操作', key: 'action', width: 90, fixed: 'right' as const },
 ];
 
@@ -64,7 +68,7 @@ async function load() {
   if (!id) return;
   loading.value = true;
   try {
-    const [versionData, result, userList, moduleList] = await Promise.all([
+    const [versionData, result, userList] = await Promise.all([
       version.value ?? versionsApi.get(id),
       tasksApi.list(id, {
         ...filters.value,
@@ -74,13 +78,11 @@ async function load() {
         order: sorter.value.order,
       }),
       users.value.length ? Promise.resolve(users.value) : usersApi.list(),
-      tasksApi.modules(id),
     ]);
     version.value = versionData as VersionView;
     items.value = result.items;
     total.value = result.total;
     users.value = userList;
-    modules.value = moduleList;
     selectedKeys.value = selectedKeys.value.filter((key) => result.items.some((task) => task.id === key));
   } catch (error) {
     message.error(errorText(error, '加载任务列表失败'));
@@ -205,7 +207,7 @@ onMounted(load);
     <VersionTabs v-if="version" :version="version" />
 
     <div class="toolbar list-toolbar">
-      <FilterBar v-model:filters="filters" :users="users" :modules="modules" />
+      <FilterBar v-model:filters="filters" :users="users" />
       <div class="toolbar-right">
         <a-tag :color="connected ? 'green' : 'default'">{{ connected ? '实时同步中' : '实时未连接' }}</a-tag>
         <a-button size="small" :loading="loading" @click="load">
@@ -257,8 +259,11 @@ onMounted(load);
             <a-tag v-if="record.overdue" color="red" style="margin-left: 6px">逾期</a-tag>
           </template>
 
-          <template v-else-if="column.key === 'module'">
-            <span class="text-muted">{{ record.module || '—' }}</span>
+          <template v-else-if="column.key === 'participants'">
+            <span v-if="record.participants.length" :title="participantText(record)">
+              {{ participantText(record) }}
+            </span>
+            <span v-else class="text-muted">—</span>
           </template>
 
           <template v-else-if="column.key === 'assignee'">
@@ -304,10 +309,19 @@ onMounted(load);
             </div>
           </template>
 
-          <template v-else-if="column.key === 'dueDate'">
+          <template v-else-if="column.key === 'plannedStartDate'">
+            <span class="text-muted">{{ record.plannedStartDate ?? '—' }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'plannedEndDate'">
             <span :class="{ 'text-danger': record.overdue }">
-              {{ record.dueDate ? dayjs(record.dueDate).format('YYYY-MM-DD') : '—' }}
+              {{ record.plannedEndDate ?? '—' }}
+              <template v-if="record.overdue">（逾期）</template>
             </span>
+          </template>
+
+          <template v-else-if="column.key === 'actualEndDate'">
+            <span class="text-muted">{{ record.actualEndDate ?? '—' }}</span>
           </template>
 
           <template v-else-if="column.key === 'action'">
@@ -329,7 +343,6 @@ onMounted(load);
       :version-id="versionId"
       :task="editingTask"
       :users="users"
-      :modules="modules"
       @saved="load"
     />
 

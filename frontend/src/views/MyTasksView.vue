@@ -28,11 +28,11 @@ const groups = computed(() => {
   const noDue: TaskView[] = [];
 
   for (const task of tasks.value) {
-    if (!task.dueDate) {
+    if (!task.plannedEndDate) {
       noDue.push(task);
-    } else if (task.dueDate < today) {
+    } else if (task.plannedEndDate < today) {
       overdue.push(task);
-    } else if (dayjs(task.dueDate).diff(dayjs(today), 'day') <= 3) {
+    } else if (dayjs(task.plannedEndDate).diff(dayjs(today), 'day') <= 3) {
       soon.push(task);
     } else {
       normal.push(task);
@@ -43,7 +43,7 @@ const groups = computed(() => {
     { key: 'overdue', title: '已逾期', color: '#ff4d4f', tasks: overdue },
     { key: 'soon', title: '3 天内到期', color: '#faad14', tasks: soon },
     { key: 'normal', title: '进行中', color: '#1677ff', tasks: normal },
-    { key: 'noDue', title: '未设截止日期', color: '#8c8c8c', tasks: noDue },
+    { key: 'noDue', title: '未设计划结束日期', color: '#8c8c8c', tasks: noDue },
   ].filter((group) => group.tasks.length > 0);
 });
 
@@ -77,7 +77,7 @@ onMounted(load);
     <div class="page-header">
       <div>
         <h2 class="page-title">我的待办</h2>
-        <p class="page-subtitle">分派给我且尚未完成的任务，按截止日期排序</p>
+        <p class="page-subtitle">我负责或我参与的未完成任务，按计划结束日期排序</p>
       </div>
       <a-button :loading="loading" @click="load">
         <ReloadOutlined />
@@ -107,7 +107,10 @@ onMounted(load);
                 </template>
                 <template #description>
                   <span class="text-muted">
-                    {{ item.module || '未分模块' }} · 截止 {{ item.dueDate ?? '未设置' }}
+                    <a-tag :color="item.isAssignee ? 'blue' : 'default'" style="margin-right: 6px">
+                      {{ item.isAssignee ? '我负责' : '我参与' }}
+                    </a-tag>
+                    计划结束 {{ item.plannedEndDate ?? '未设置' }}
                   </span>
                 </template>
               </a-list-item-meta>
@@ -141,7 +144,6 @@ onMounted(load);
       :version-id="editingTask?.versionId ?? ''"
       :task="editingTask"
       :users="users"
-      :modules="[]"
       @saved="load"
     />
   </div>

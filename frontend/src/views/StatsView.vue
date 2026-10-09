@@ -99,21 +99,6 @@ const assigneeOption = computed<EChartsOption>(() => {
   };
 });
 
-const moduleOption = computed<EChartsOption>(() => {
-  const rows = [...(stats.value?.byModule ?? [])].reverse();
-  return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { bottom: 0, data: ['总任务数', '已完成'] },
-    grid: { left: 8, right: 16, top: 24, bottom: 40, containLabel: true },
-    xAxis: { type: 'category', data: rows.map((item) => item.label) },
-    yAxis: { type: 'value', minInterval: 1 },
-    series: [
-      { name: '总任务数', type: 'bar', barWidth: 18, data: rows.map((item) => item.total), itemStyle: { color: '#91caff' } },
-      { name: '已完成', type: 'bar', barWidth: 18, data: rows.map((item) => item.done), itemStyle: { color: '#52c41a' } },
-    ],
-  };
-});
-
 async function load() {
   const id = versionId.value;
   if (!id) return;
@@ -164,10 +149,6 @@ onMounted(load);
 
       <a-card size="small" title="各负责人任务数与平均进度" style="margin-top: 12px">
         <EChart v-if="stats" :option="assigneeOption" height="320px" />
-      </a-card>
-
-      <a-card size="small" title="各模块任务数与完成情况" style="margin-top: 12px">
-        <EChart v-if="stats" :option="moduleOption" height="320px" />
       </a-card>
     </a-spin>
   </div>

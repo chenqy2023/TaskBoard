@@ -9,7 +9,6 @@ import {
 } from '../common/constants';
 
 const UNASSIGNED = '未分配';
-const NO_MODULE = '未填模块';
 
 interface Bucket {
   key: string;
@@ -27,7 +26,7 @@ export class StatsService {
   ) {}
 
   async byVersion(versionId: string) {
-    const [summary, statusRows, priorityRows, assigneeRows, moduleRows] = await Promise.all([
+    const [summary, statusRows, priorityRows, assigneeRows] = await Promise.all([
       this.versions.getSummary(versionId),
       this.prisma.task.groupBy({
         by: ['status'],
@@ -41,12 +40,6 @@ export class StatsService {
       }),
       this.prisma.task.groupBy({
         by: ['assigneeId', 'status'],
-        where: { versionId, deletedAt: null },
-        _count: { _all: true },
-        _sum: { progress: true },
-      }),
-      this.prisma.task.groupBy({
-        by: ['module', 'status'],
         where: { versionId, deletedAt: null },
         _count: { _all: true },
         _sum: { progress: true },
@@ -71,16 +64,6 @@ export class StatsService {
       })),
     );
 
-    const modules = foldBuckets(
-      moduleRows.map((row) => ({
-        key: row.module || 'none',
-        label: row.module || NO_MODULE,
-        status: row.status,
-        count: row._count._all,
-        progressSum: row._sum.progress ?? 0,
-      })),
-    );
-
     return {
       summary,
       byStatus: TASK_STATUS_ORDER.map((status) => ({
@@ -94,7 +77,6 @@ export class StatsService {
         count: priorityCount.get(priority) ?? 0,
       })),
       byAssignee: assignees,
-      byModule: modules,
     };
   }
 }

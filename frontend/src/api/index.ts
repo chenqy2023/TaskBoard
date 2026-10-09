@@ -62,8 +62,6 @@ export const tasksApi = {
       .then((r) => r.data),
   board: (versionId: string, params?: TaskQuery) =>
     http.get<TaskView[]>(`/versions/${versionId}/board`, { params }).then((r) => r.data),
-  modules: (versionId: string) =>
-    http.get<string[]>(`/versions/${versionId}/modules`).then((r) => r.data),
   my: () => http.get<TaskView[]>('/tasks/my').then((r) => r.data),
   get: (id: string) => http.get<TaskView>(`/tasks/${id}`).then((r) => r.data),
   create: (payload: Record<string, unknown>) => http.post<TaskView>('/tasks', payload).then((r) => r.data),

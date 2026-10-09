@@ -96,9 +96,9 @@ function close() {
     <a-alert type="info" show-icon :closable="false" style="margin-bottom: 12px">
       <template #message>支持 .xlsx 文件，首行需包含「标题」列</template>
       <template #description>
-        列名可用：标题（必填）、模块、负责人、优先级、状态、进度、截止日期、描述。
-        负责人填登录账号或姓名；优先级 <code>P0~P3</code> 或 <code>P0 紧急</code> 都能识别；
-        状态支持 <code>TODO</code>/<code>未开始</code> 等中英文写法。
+        列名可用：标题（必填）、负责人、参与人、优先级、状态、进度、计划开始日期、计划结束日期、
+        实际开始日期、实际结束日期、描述。负责人只能一个，参与人可多个（用「、」或逗号分隔）；<br />
+        优先级 <code>P0~P3</code> 或 <code>P0 紧急</code> 都能识别；状态支持 <code>TODO</code>/<code>未开始</code> 等中英文写法。
         <a @click="downloadTemplate">下载当前任务清单作为模板</a>
       </template>
     </a-alert>
@@ -140,11 +140,13 @@ function close() {
               </span>
             </template>
           </a-table-column>
-          <a-table-column title="模块" :width="100">
-            <template #default="{ record }">{{ record.parsed.module || '—' }}</template>
-          </a-table-column>
-          <a-table-column title="负责人" :width="100">
+          <a-table-column title="负责人" :width="90">
             <template #default="{ record }">{{ record.parsed.assigneeName || '未分配' }}</template>
+          </a-table-column>
+          <a-table-column title="参与人" :width="130">
+            <template #default="{ record }">
+              {{ record.parsed.participantNames.length ? record.parsed.participantNames.join('、') : '—' }}
+            </template>
           </a-table-column>
           <a-table-column title="优先级" :width="80">
             <template #default="{ record }">
@@ -158,6 +160,18 @@ function close() {
           </a-table-column>
           <a-table-column title="进度" :width="60">
             <template #default="{ record }">{{ record.parsed.progress }}%</template>
+          </a-table-column>
+          <a-table-column title="计划开始" :width="100">
+            <template #default="{ record }">{{ record.parsed.plannedStartDate || '—' }}</template>
+          </a-table-column>
+          <a-table-column title="计划结束" :width="100">
+            <template #default="{ record }">{{ record.parsed.plannedEndDate || '—' }}</template>
+          </a-table-column>
+          <a-table-column title="实际开始" :width="100">
+            <template #default="{ record }">{{ record.parsed.actualStartDate || '—' }}</template>
+          </a-table-column>
+          <a-table-column title="实际结束" :width="100">
+            <template #default="{ record }">{{ record.parsed.actualEndDate || '—' }}</template>
           </a-table-column>
           <a-table-column title="校验结果">
             <template #default="{ record }">

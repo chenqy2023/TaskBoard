@@ -33,16 +33,16 @@ export class CreateTaskDto {
   @MaxLength(5000)
   description?: string | null;
 
-  @ApiPropertyOptional({ example: '登录鉴权' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  module?: string;
-
   @ApiPropertyOptional({ description: '负责人 id，留空表示未分配' })
   @IsOptional()
   @IsString()
   assigneeId?: string | null;
+
+  @ApiPropertyOptional({ type: [String], description: '参与人 id 列表，可多选' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participantIds?: string[];
 
   @ApiPropertyOptional({ enum: Priority, default: Priority.P2 })
   @IsOptional()
@@ -54,17 +54,32 @@ export class CreateTaskDto {
   @IsEnum(TaskStatus, { message: '状态不合法' })
   status?: TaskStatus;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 100, default: 0 })
+  @ApiPropertyOptional({ minimum: 0, maximum: 100, default: 0, description: '0-100 的整数' })
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(100)
+  @IsInt({ message: '进度必须是整数' })
+  @Min(0, { message: '进度不能小于 0' })
+  @Max(100, { message: '进度不能大于 100' })
   progress?: number;
+
+  @ApiPropertyOptional({ example: '2026-10-01' })
+  @IsOptional()
+  @IsDateString({}, { message: '计划开始日期格式应为 YYYY-MM-DD' })
+  plannedStartDate?: string | null;
 
   @ApiPropertyOptional({ example: '2026-10-20' })
   @IsOptional()
-  @IsDateString({}, { message: '截止日期格式应为 YYYY-MM-DD' })
-  dueDate?: string | null;
+  @IsDateString({}, { message: '计划结束日期格式应为 YYYY-MM-DD' })
+  plannedEndDate?: string | null;
+
+  @ApiPropertyOptional({ example: '2026-10-02' })
+  @IsOptional()
+  @IsDateString({}, { message: '实际开始日期格式应为 YYYY-MM-DD' })
+  actualStartDate?: string | null;
+
+  @ApiPropertyOptional({ example: '2026-10-21' })
+  @IsOptional()
+  @IsDateString({}, { message: '实际结束日期格式应为 YYYY-MM-DD' })
+  actualEndDate?: string | null;
 }
 
 export class UpdateTaskDto {
@@ -83,13 +98,13 @@ export class UpdateTaskDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(80)
-  module?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
   assigneeId?: string | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participantIds?: string[];
 
   @ApiPropertyOptional({ enum: Priority })
   @IsOptional()
@@ -103,15 +118,30 @@ export class UpdateTaskDto {
 
   @ApiPropertyOptional({ minimum: 0, maximum: 100 })
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(100)
+  @IsInt({ message: '进度必须是整数' })
+  @Min(0, { message: '进度不能小于 0' })
+  @Max(100, { message: '进度不能大于 100' })
   progress?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsDateString({}, { message: '截止日期格式应为 YYYY-MM-DD' })
-  dueDate?: string | null;
+  @IsDateString({}, { message: '计划开始日期格式应为 YYYY-MM-DD' })
+  plannedStartDate?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString({}, { message: '计划结束日期格式应为 YYYY-MM-DD' })
+  plannedEndDate?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString({}, { message: '实际开始日期格式应为 YYYY-MM-DD' })
+  actualStartDate?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString({}, { message: '实际结束日期格式应为 YYYY-MM-DD' })
+  actualEndDate?: string | null;
 }
 
 export class MoveTaskDto {
@@ -137,15 +167,15 @@ export class QueryTaskDto {
   @IsString()
   assigneeId?: string;
 
+  @ApiPropertyOptional({ description: '参与人 id' })
+  @IsOptional()
+  @IsString()
+  participantId?: string;
+
   @ApiPropertyOptional({ enum: Priority })
   @IsOptional()
   @IsEnum(Priority)
   priority?: Priority;
-
-  @ApiPropertyOptional({ description: '模块，精确匹配' })
-  @IsOptional()
-  @IsString()
-  module?: string;
 
   @ApiPropertyOptional({ description: '标题/描述关键字' })
   @IsOptional()
@@ -168,7 +198,7 @@ export class QueryTaskDto {
   pageSize?: number;
 
   @ApiPropertyOptional({
-    enum: ['sortIndex', 'createdAt', 'dueDate', 'priority', 'progress', 'title'],
+    enum: ['sortIndex', 'createdAt', 'plannedEndDate', 'priority', 'progress', 'title'],
     default: 'sortIndex',
   })
   @IsOptional()
@@ -202,9 +232,4 @@ export class BatchUpdateTaskDto {
   @IsOptional()
   @IsEnum(TaskStatus)
   status?: TaskStatus;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsDateString({}, { message: '截止日期格式应为 YYYY-MM-DD' })
-  dueDate?: string | null;
 }

@@ -37,14 +37,8 @@ export class TasksController {
     return this.tasksService.findBoard(versionId, query);
   }
 
-  @Get('versions/:versionId/modules')
-  @ApiOperation({ summary: '该版本出现过的模块列表（筛选下拉用）' })
-  listModules(@Param('versionId') versionId: string) {
-    return this.tasksService.listModules(versionId);
-  }
-
   @Get('tasks/my')
-  @ApiOperation({ summary: '我的待办（未完成任务）' })
+  @ApiOperation({ summary: '我的待办（我负责或我参与、且未完成的任务）' })
   myTasks(@CurrentUser() actor: AuthUser) {
     return this.tasksService.myTasks(actor);
   }

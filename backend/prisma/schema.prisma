@@ -42,7 +42,9 @@ enum ActivityAction {
   TASK_DELETED
   STATUS_CHANGED
   ASSIGNEE_CHANGED
+  PARTICIPANTS_CHANGED
   PRIORITY_CHANGED
+  /// 四种计划/实际日期的变更都用这个 action，具体是哪一个看 field
   DUE_DATE_CHANGED
   PROGRESS_CHANGED
   COMMENT_ADDED
@@ -58,11 +60,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  createdVersions Version[]     @relation("VersionCreatedBy")
-  assignedTasks   Task[]        @relation("TaskAssignee")
-  createdTasks    Task[]        @relation("TaskCreatedBy")
-  comments        Comment[]
-  activities      ActivityLog[]
+  createdVersions   Version[]     @relation("VersionCreatedBy")
+  assignedTasks     Task[]        @relation("TaskAssignee")
+  createdTasks      Task[]        @relation("TaskCreatedBy")
+  participatedTasks Task[]        @relation("TaskParticipants")
+  comments          Comment[]
+  activities        ActivityLog[]
 
   @@map("users")
 }
@@ -91,14 +94,19 @@ model Task {
   version     Version    @relation(fields: [versionId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  module      String     @default("")
   assigneeId  String?
   assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  /// 参与人可以有多个，用于记录一起做这条任务的人
+  participants User[]    @relation("TaskParticipants")
   priority    Priority   @default(P2)
   status      TaskStatus @default(TODO)
-  /// 手动填写 0-100
+  /// 手动填写 0-100 的整数
   progress    Int        @default(0)
-  dueDate     DateTime?
+  // 计划与实际日期：逾期判断以「计划结束日期」为准
+  plannedStartDate  DateTime?
+  plannedEndDate    DateTime?
+  actualStartDate   DateTime?
+  actualEndDate     DateTime?
   /// 看板列内排序，越小越靠前
   sortIndex   Int        @default(0)
   createdById String
@@ -114,6 +122,7 @@ model Task {
 
   @@index([versionId, status, sortIndex])
   @@index([assigneeId])
+  @@index([plannedEndDate])
   @@index([deletedAt])
   @@map("tasks")
 }

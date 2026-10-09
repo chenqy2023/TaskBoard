@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import {
+  DATE_FIELD_LABELS,
   PRIORITY_LABELS,
   TASK_EXCEL_COLUMNS,
   TASK_STATUS_LABELS,
@@ -12,6 +13,7 @@ import {
 import { formatDateOnly, toDateOnly } from '../common/date.util';
 import type { AuthUser } from '../common/decorators/current-user.decorator';
 import {
+  checkDateOrder,
   excelSerialToDate,
   parseImportRow,
   type ImportContext,
@@ -26,18 +28,26 @@ const HEADER_ALIASES: Record<string, keyof RawImportRow> = {
   任务标题: 'title',
   任务: 'title',
   名称: 'title',
-  模块: 'module',
-  所属模块: 'module',
   负责人: 'assignee',
   指派给: 'assignee',
   执行人: 'assignee',
+  参与人: 'participants',
+  协作人: 'participants',
+  参与者: 'participants',
   优先级: 'priority',
   状态: 'status',
   任务状态: 'status',
   进度: 'progress',
   完成度: 'progress',
-  截止日期: 'dueDate',
-  计划完成日期: 'dueDate',
+  计划开始日期: 'plannedStartDate',
+  计划开始: 'plannedStartDate',
+  计划结束日期: 'plannedEndDate',
+  计划结束: 'plannedEndDate',
+  截止日期: 'plannedEndDate',
+  实际开始日期: 'actualStartDate',
+  实际开始: 'actualStartDate',
+  实际结束日期: 'actualEndDate',
+  实际结束: 'actualEndDate',
   描述: 'description',
   备注: 'description',
   说明: 'description',
@@ -60,7 +70,10 @@ export class TaskIoService {
 
     const tasks = await this.prisma.task.findMany({
       where: { versionId, deletedAt: null },
-      include: { assignee: { select: { displayName: true } } },
+      include: {
+        assignee: { select: { displayName: true } },
+        participants: { select: { displayName: true } },
+      },
       orderBy: [{ status: 'asc' }, { sortIndex: 'asc' }],
     });
 
@@ -69,14 +82,17 @@ export class TaskIoService {
     const sheet = workbook.addWorksheet('任务清单');
 
     sheet.columns = [
-      { header: TASK_EXCEL_COLUMNS[0], key: 'title', width: 42 },
-      { header: TASK_EXCEL_COLUMNS[1], key: 'module', width: 16 },
-      { header: TASK_EXCEL_COLUMNS[2], key: 'assignee', width: 12 },
+      { header: TASK_EXCEL_COLUMNS[0], key: 'title', width: 40 },
+      { header: TASK_EXCEL_COLUMNS[1], key: 'assignee', width: 12 },
+      { header: TASK_EXCEL_COLUMNS[2], key: 'participants', width: 20 },
       { header: TASK_EXCEL_COLUMNS[3], key: 'priority', width: 12 },
       { header: TASK_EXCEL_COLUMNS[4], key: 'status', width: 12 },
       { header: TASK_EXCEL_COLUMNS[5], key: 'progress', width: 10 },
-      { header: TASK_EXCEL_COLUMNS[6], key: 'dueDate', width: 14 },
-      { header: TASK_EXCEL_COLUMNS[7], key: 'description', width: 50 },
+      { header: TASK_EXCEL_COLUMNS[6], key: 'plannedStartDate', width: 16 },
+      { header: TASK_EXCEL_COLUMNS[7], key: 'plannedEndDate', width: 16 },
+      { header: TASK_EXCEL_COLUMNS[8], key: 'actualStartDate', width: 16 },
+      { header: TASK_EXCEL_COLUMNS[9], key: 'actualEndDate', width: 16 },
+      { header: TASK_EXCEL_COLUMNS[10], key: 'description', width: 40 },
     ];
 
     sheet.getRow(1).font = { bold: true };
@@ -89,31 +105,37 @@ export class TaskIoService {
     for (const task of tasks) {
       sheet.addRow({
         title: task.title,
-        module: task.module,
         assignee: task.assignee?.displayName ?? '',
+        participants: task.participants.map((item) => item.displayName).join('、'),
         priority: PRIORITY_LABELS[task.priority],
         status: TASK_STATUS_LABELS[task.status],
         progress: task.progress,
-        dueDate: formatDateOnly(task.dueDate) ?? '',
+        plannedStartDate: formatDateOnly(task.plannedStartDate) ?? '',
+        plannedEndDate: formatDateOnly(task.plannedEndDate) ?? '',
+        actualStartDate: formatDateOnly(task.actualStartDate) ?? '',
+        actualEndDate: formatDateOnly(task.actualEndDate) ?? '',
         description: task.description ?? '',
       });
     }
 
     const guide = workbook.addWorksheet('填写说明');
     guide.columns = [
-      { header: '字段', key: 'field', width: 14 },
+      { header: '字段', key: 'field', width: 16 },
       { header: '是否必填', key: 'required', width: 10 },
       { header: '可填值 / 说明', key: 'note', width: 70 },
     ];
     guide.getRow(1).font = { bold: true };
     [
       ['标题', '是', '任务名称，最长 200 字'],
-      ['模块', '否', '自由文本，例如「登录鉴权」；同名会自动归到一组'],
-      ['负责人', '否', `填登录账号或姓名，如 admin / 张三；不存在时该行会提示警告并留空`],
+      ['负责人', '否', '填登录账号或姓名，如 admin / 张三；只能填一个人；不存在时会提示警告并留空'],
+      ['参与人', '否', '可填多人，用「、」「,」或空格分隔；不存在的名字会被忽略并给出警告'],
       ['优先级', '否', `${Object.values(PRIORITY_LABELS).join(' / ')}，也可只写 P0~P3；默认 P2 中`],
       ['状态', '否', `${Object.values(TASK_STATUS_LABELS).join(' / ')}，也可只写 TODO/IN_PROGRESS/BLOCKED/DONE；默认未开始`],
-      ['进度', '否', '0-100 的数字；状态为已完成时会强制为 100'],
-      ['截止日期', '否', 'YYYY-MM-DD，也支持 2026/10/20、2026年10月20日'],
+      ['进度', '否', '0-100 的整数；状态为已完成时会强制为 100'],
+      [DATE_FIELD_LABELS.plannedStartDate, '否', 'YYYY-MM-DD，也支持 2026/10/20、2026年10月20日'],
+      [DATE_FIELD_LABELS.plannedEndDate, '否', '逾期判断以这个日期为准，也叫「截止日期」'],
+      [DATE_FIELD_LABELS.actualStartDate, '否', 'YYYY-MM-DD'],
+      [DATE_FIELD_LABELS.actualEndDate, '否', 'YYYY-MM-DD'],
       ['描述', '否', '补充说明'],
     ].forEach((row) => guide.addRow({ field: row[0], required: row[1], note: row[2] }));
 
@@ -148,7 +170,11 @@ export class TaskIoService {
     if (rawRows.length > 2000) throw new BadRequestException('单次最多导入 2000 行，请分批处理');
 
     const ctx = await this.buildContext();
-    const parsed = rawRows.map((raw) => ({ raw, parsed: parseImportRow(raw, ctx) }));
+    const parsed = rawRows.map((raw) => {
+      const row = parseImportRow(raw, ctx);
+      row.warnings.push(...checkDateOrder(row));
+      return { raw, parsed: row };
+    });
 
     return {
       total: parsed.length,
@@ -170,12 +196,7 @@ export class TaskIoService {
 
     if (prepared.length === 0) throw new BadRequestException('没有通过校验的行，未导入任何数据');
 
-    const assigneeIds = [...new Set(prepared.map((r) => r.assigneeId).filter((id): id is string => !!id))];
-    const users = await this.prisma.user.findMany({
-      where: { id: { in: assigneeIds } },
-      select: { id: true },
-    });
-    const validUserIds = new Set(users.map((u) => u.id));
+    const validUserIds = new Set(ctx.users.map((user) => user.id));
 
     const created = await this.prisma.$transaction(async (tx) => {
       let counter = 0;
@@ -187,12 +208,19 @@ export class TaskIoService {
             versionId,
             title: row.title.slice(0, 200),
             description: row.description,
-            module: row.module,
             assigneeId: row.assigneeId && validUserIds.has(row.assigneeId) ? row.assigneeId : null,
+            participants: {
+              connect: row.participantIds
+                .filter((id) => validUserIds.has(id))
+                .map((id) => ({ id })),
+            },
             priority: row.priority,
             status: row.status,
             progress: row.progress,
-            dueDate: row.dueDate ? toDateOnly(row.dueDate) : null,
+            plannedStartDate: toDateOnly(row.plannedStartDate),
+            plannedEndDate: toDateOnly(row.plannedEndDate),
+            actualStartDate: toDateOnly(row.actualStartDate),
+            actualEndDate: toDateOnly(row.actualEndDate),
             completedAt: row.status === TaskStatus.DONE ? new Date() : null,
             sortIndex: counter,
             createdById: actor.id,
@@ -236,7 +264,10 @@ export class TaskIoService {
     return map;
   }
 
-  private readRows(sheet: ExcelJS.Worksheet, headerMap: Map<keyof RawImportRow, number>): RawImportRow[] {
+  private readRows(
+    sheet: ExcelJS.Worksheet,
+    headerMap: Map<keyof RawImportRow, number>,
+  ): RawImportRow[] {
     const rows: RawImportRow[] = [];
     const get = (row: ExcelJS.Row, field: string): string => {
       const col = headerMap.get(field as keyof RawImportRow);
@@ -249,16 +280,19 @@ export class TaskIoService {
       const raw: RawImportRow = {
         rowNo: rowNumber,
         title: get(row, 'title'),
-        module: get(row, 'module'),
         assignee: get(row, 'assignee'),
+        participants: get(row, 'participants'),
         priority: get(row, 'priority'),
         status: get(row, 'status'),
         progress: get(row, 'progress'),
-        dueDate: get(row, 'dueDate'),
+        plannedStartDate: get(row, 'plannedStartDate'),
+        plannedEndDate: get(row, 'plannedEndDate'),
+        actualStartDate: get(row, 'actualStartDate'),
+        actualEndDate: get(row, 'actualEndDate'),
         description: get(row, 'description'),
       };
       // 整行空白直接跳过，避免 Excel 尾部的空行被当成错误行
-      if (!raw.title && !raw.module && !raw.assignee && !raw.description) return;
+      if (!raw.title && !raw.assignee && !raw.participants && !raw.description) return;
       rows.push(raw);
     });
 
@@ -307,12 +341,15 @@ export function toRawRow(row: ImportRowDto): RawImportRow {
   return {
     rowNo: row.rowNo,
     title: row.title ?? '',
-    module: row.module ?? '',
     assignee: row.assignee ?? '',
+    participants: row.participants ?? '',
     priority: row.priority ?? '',
     status: row.status ?? '',
     progress: row.progress ?? '',
-    dueDate: row.dueDate ?? '',
+    plannedStartDate: row.plannedStartDate ?? '',
+    plannedEndDate: row.plannedEndDate ?? '',
+    actualStartDate: row.actualStartDate ?? '',
+    actualEndDate: row.actualEndDate ?? '',
     description: row.description ?? '',
   };
 }
