@@ -175,8 +175,8 @@ async function submitPassword() {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
-  background: #1677ff;
+  border-radius: var(--tk-radius-sm);
+  background: var(--tk-brand);
   font-weight: 700;
   font-size: 13px;
   flex: none;

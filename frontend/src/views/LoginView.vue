@@ -70,15 +70,15 @@ async function submit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e6f4ff 0%, #f0f2f5 45%, #f6ffed 100%);
+  background: linear-gradient(135deg, var(--tk-brand-tint) 0%, var(--tk-bg) 45%, var(--tk-success-tint) 100%);
 }
 
 .login-card {
   width: 380px;
-  background: #fff;
-  border-radius: 12px;
+  background: var(--tk-surface);
+  border-radius: var(--tk-radius-md);
   padding: 32px 32px 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--tk-shadow-panel);
 }
 
 .login-head {
@@ -97,8 +97,8 @@ async function submit() {
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  background: #1677ff;
+  border-radius: var(--tk-radius-md);
+  background: var(--tk-brand);
   color: #fff;
   font-size: 20px;
   font-weight: 700;

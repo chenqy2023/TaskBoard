@@ -404,9 +404,9 @@ onMounted(load);
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #e6f4ff;
-  border: 1px solid #91caff;
-  border-radius: 6px;
+  background: var(--tk-brand-tint);
+  border: 1px solid var(--tk-brand-tint-border);
+  border-radius: var(--tk-radius-sm);
   padding: 8px 12px;
   margin-bottom: 8px;
   font-size: 13px;
@@ -426,7 +426,6 @@ onMounted(load);
 
 .percent {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink-3);
 }
 </style>

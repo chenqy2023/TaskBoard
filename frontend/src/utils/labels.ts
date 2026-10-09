@@ -17,6 +17,17 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   DONE: 'success',
 };
 
+/**
+ * JS 侧需要取语义色时统一从这里拿（图表、分组标记等）。
+ * CSS 侧的同一组值在 main.css 的 --tk-* 变量里，两处含义一致。
+ */
+export const SEMANTIC = {
+  brand: '#1677ff',
+  danger: '#ff4d4f',
+  warn: '#fa8c16',
+  success: '#52c41a',
+} as const;
+
 /** 看板列头的淡底色，比列面板稍深一点，让列头可辨识 */
 export const TASK_STATUS_TINTS: Record<TaskStatus, string> = {
   TODO: '#e3e7ec',

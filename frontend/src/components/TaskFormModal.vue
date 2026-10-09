@@ -286,7 +286,7 @@ async function submit() {
 <style scoped>
 .hint {
   font-size: 12px;
-  color: #fa8c16;
+  color: var(--tk-warn);
   margin-bottom: 8px;
 }
 

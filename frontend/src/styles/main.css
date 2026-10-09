@@ -17,6 +17,10 @@
 
   /* 品牌与语义色 */
   --tk-brand: #1677ff;
+  /* 品牌淡底与其中性边框：选中态、提示条等复用同一组 */
+  --tk-brand-tint: #e6f4ff;
+  --tk-brand-tint-border: #91caff;
+  --tk-success-tint: #f6ffed;
   --tk-danger: #ff4d4f;
   --tk-warn: #fa8c16;
   --tk-success: #52c41a;
@@ -50,9 +54,14 @@
   --tk-panel: #f7f8fa;
   --tk-hairline: rgba(9, 30, 66, 0.08);
 
-  /* 数字字形：等宽让百分比、日期、编号各列对齐，中文仍走系统字体 */
-  --tk-num: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono',
-    ui-monospace, monospace;
+  /* 正文字体栈：提出来给 body 和 AntDV 的 theme.token 共用，避免两处各写一份 */
+  --tk-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+
+  /* 数字字形：版本号、百分比、日期用等宽，保证列对齐。
+     原先栈首写的 JetBrains Mono 从未加载、一直静默回落，这里去掉，
+     只留系统真实存在的等宽字体；正文字体的数字对齐靠 tabular-nums（见 body）。 */
+  --tk-num: 'Cascadia Mono', Consolas, 'SFMono-Regular', 'Liberation Mono', ui-monospace, monospace;
 }
 
 * {
@@ -67,10 +76,11 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--tk-font-ui);
   background: var(--tk-bg);
   color: var(--tk-ink);
+  /* 全局等宽数字：表格、进度、计数里的数字列对齐，避免逐行跳动 */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -190,8 +200,8 @@ body {
 }
 
 .status-chip.active {
-  background: #e6f4ff;
-  border-color: #91caff;
+  background: var(--tk-brand-tint);
+  border-color: var(--tk-brand-tint-border);
   color: var(--tk-brand);
   font-weight: 600;
 }
@@ -217,7 +227,7 @@ body {
   align-items: stretch;
   background: var(--tk-surface);
   border: 1px solid var(--tk-line);
-  border-radius: 10px;
+  border-radius: var(--tk-radius-md);
   padding: 14px 4px;
   margin-bottom: 14px;
 }

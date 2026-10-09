@@ -10,7 +10,7 @@ import VersionTabs from '@/components/VersionTabs.vue';
 import ProgressSummary from '@/components/ProgressSummary.vue';
 import EChart from '@/components/EChart.vue';
 import type { EChartsOption } from 'echarts';
-import { PRIORITY_COLORS, TASK_STATUS_BAR_COLORS } from '@/utils/labels';
+import { PRIORITY_COLORS, SEMANTIC, TASK_STATUS_BAR_COLORS } from '@/utils/labels';
 
 const route = useRoute();
 const versionId = computed(() => String(route.params.id ?? ''));
@@ -72,7 +72,7 @@ const assigneeOption = computed<EChartsOption>(() => {
       { type: 'value', name: '进度%', max: 100, min: 0 },
     ],
     series: [
-      { name: '任务数', type: 'bar', barWidth: 20, data: rows.map((item) => item.total), itemStyle: { color: '#1677ff' } },
+      { name: '任务数', type: 'bar', barWidth: 20, data: rows.map((item) => item.total), itemStyle: { color: SEMANTIC.brand } },
       {
         name: '平均进度',
         type: 'line',
@@ -80,7 +80,7 @@ const assigneeOption = computed<EChartsOption>(() => {
         smooth: true,
         symbolSize: 7,
         data: rows.map((item) => item.avgProgress),
-        itemStyle: { color: '#fa8c16' },
+        itemStyle: { color: SEMANTIC.warn },
       },
     ],
   };

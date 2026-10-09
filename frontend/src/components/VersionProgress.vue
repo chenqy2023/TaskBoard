@@ -166,7 +166,7 @@ const avgTone = computed(() => {
   flex: none;
   width: 132px;
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--tk-radius-pill);
   overflow: hidden;
   background: var(--tk-line);
 }

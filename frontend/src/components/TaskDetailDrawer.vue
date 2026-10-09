@@ -301,8 +301,8 @@ function removeTask() {
 
 .comment {
   padding: 8px 10px;
-  background: #fafafa;
-  border-radius: 6px;
+  background: var(--tk-panel);
+  border-radius: var(--tk-radius-sm);
   margin-bottom: 8px;
 }
 

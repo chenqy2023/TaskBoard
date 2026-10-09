@@ -9,6 +9,8 @@ import { tasksApi, usersApi } from '@/api';
 import { errorText } from '@/api/http';
 import {
   PRIORITY_LABELS,
+  SEMANTIC,
+  TASK_STATUS_BAR_COLORS,
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
   priorityColor,
@@ -46,10 +48,10 @@ const groups = computed(() => {
   }
 
   return [
-    { key: 'overdue', title: '已逾期', color: '#ff4d4f', tasks: overdue },
-    { key: 'soon', title: '3 天内到期', color: '#faad14', tasks: soon },
-    { key: 'normal', title: '进行中', color: '#1677ff', tasks: normal },
-    { key: 'noDue', title: '未设计划结束日期', color: '#8c8c8c', tasks: noDue },
+    { key: 'overdue', title: '已逾期', color: SEMANTIC.danger, tasks: overdue },
+    { key: 'soon', title: '3 天内到期', color: SEMANTIC.warn, tasks: soon },
+    { key: 'normal', title: '进行中', color: SEMANTIC.brand, tasks: normal },
+    { key: 'noDue', title: '未设计划结束日期', color: TASK_STATUS_BAR_COLORS.TODO, tasks: noDue },
   ].filter((group) => group.tasks.length > 0);
 });
 
@@ -177,7 +179,6 @@ onMounted(load);
 
 .percent {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink-3);
 }
 </style>

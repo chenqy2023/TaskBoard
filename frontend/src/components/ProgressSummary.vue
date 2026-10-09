@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { VersionSummary } from '@/types';
+import type { TaskStatus, VersionSummary } from '@/types';
+import { TASK_STATUS_BAR_COLORS, TASK_STATUS_LABELS, progressColor } from '@/utils/labels';
 
 const props = withDefaults(
   defineProps<{
@@ -15,22 +16,21 @@ const rate = computed(() => props.summary?.completionRate ?? 0);
 const total = computed(() => props.summary?.total ?? 0);
 const done = computed(() => props.summary?.done ?? 0);
 
-const strokeColor = computed(() => {
-  if (avg.value >= 100) return '#52c41a';
-  if (avg.value >= 60) return '#1677ff';
-  if (avg.value >= 30) return '#faad14';
-  return '#ff7875';
-});
+/** 进度条颜色按整体进度分档；色值统一走 labels.ts，不在这里另存一份 */
+const strokeColor = computed(() => progressColor('IN_PROGRESS', avg.value));
+
+/** 状态小计：颜色与文案都从 labels.ts 取，避免各处各写一份导致失配 */
+const STATUS_ORDER: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE'];
 
 const breakdown = computed(() => {
   const byStatus = props.summary?.byStatus;
   if (!byStatus) return [];
-  return [
-    { label: '未开始', key: 'TODO', count: byStatus.TODO ?? 0, color: '#8c8c8c' },
-    { label: '进行中', key: 'IN_PROGRESS', count: byStatus.IN_PROGRESS ?? 0, color: '#1677ff' },
-    { label: '阻塞', key: 'BLOCKED', count: byStatus.BLOCKED ?? 0, color: '#ff4d4f' },
-    { label: '已完成', key: 'DONE', count: byStatus.DONE ?? 0, color: '#52c41a' },
-  ].filter((item) => item.count > 0);
+  return STATUS_ORDER.map((status) => ({
+    key: status,
+    label: TASK_STATUS_LABELS[status],
+    count: byStatus[status] ?? 0,
+    color: TASK_STATUS_BAR_COLORS[status],
+  })).filter((item) => item.count > 0);
 });
 </script>
 
