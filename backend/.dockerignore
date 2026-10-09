@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.env
+*.log
+.tmp-*
+test
+**/*.spec.ts
+tsconfig.build.tsbuildinfo

@@ -1,0 +1,35 @@
+{
+  "name": "test-kanban-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "测试任务看板 - 前端 (Vue3 + Vite + Ant Design Vue)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:only": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "ant-design-vue": "^4.2.6",
+    "axios": "^1.8.4",
+    "dayjs": "^1.11.13",
+    "echarts": "^5.6.0",
+    "pinia": "^2.3.1",
+    "socket.io-client": "^4.8.1",
+    "sortablejs": "^1.15.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "@types/sortablejs": "^1.15.8",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.4",
+    "vue-tsc": "^2.2.8"
+  }
+}

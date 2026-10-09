@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+coverage/
+
+# env files (keep .env.example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+.tmp-*
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# 编码助手的工作区状态，不进仓库
+.zcode/
+
+# local data (uploads / pg dumps / exports)
+data/
+*.dump
+
+# prisma local artifacts
+backend/prisma/*.db
+backend/prisma/*.db-journal

@@ -1,0 +1,30 @@
+# 统一换行符：避免 Windows 下 checkout 出 CRLF
+# 这些文件会进 Linux 容器，CRLF 会导致 shell 脚本执行失败、nginx/Dockerfile 解析异常。
+* text=auto eol=lf
+
+*.sh                text eol=lf
+Dockerfile          text eol=lf
+*.dockerignore      text eol=lf
+*.conf              text eol=lf
+*.yml               text eol=lf
+*.yaml              text eol=lf
+*.json              text eol=lf
+*.prisma            text eol=lf
+*.md                text eol=lf
+*.ts                text eol=lf
+*.vue               text eol=lf
+*.py                text eol=lf
+
+# Windows 专用脚本（如有）保留 CRLF
+*.bat               text eol=crlf
+*.cmd               text eol=crlf
+
+# 二进制
+*.png               binary
+*.jpg               binary
+*.jpeg              binary
+*.gif               binary
+*.ico               binary
+*.xlsx              binary
+*.woff              binary
+*.woff2             binary

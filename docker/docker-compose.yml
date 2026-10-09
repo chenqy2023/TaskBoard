@@ -1,0 +1,89 @@
+# 生产部署：nginx(静态+反代) + api(NestJS) + postgres:16-alpine
+#
+# 部署步骤：
+#   1) 在仓库根目录 cp .env.example .env，改掉 JWT_SECRET 与 ADMIN_INITIAL_PASSWORD
+#   2) docker compose --env-file .env -f docker/docker-compose.yml up -d --build
+#   3) 浏览器访问 http://<服务器IP>:8080
+#
+# 注意：compose v2 的项目目录是 compose 文件所在目录，不会自动读仓库根目录的 .env，
+# 所以命令里必须带 --env-file .env（在仓库根目录执行）。
+# 需要 docker compose >= v2.3（因为用了顶层 name 字段）。
+#
+# 显式指定项目名与卷名，避免与 E:\projects 下其他项目的 docker/ 目录互相顶掉容器。
+name: test-kanban
+
+services:
+  db:
+    image: ${IMAGE_POSTGRES:-postgres:16-alpine}
+    container_name: test-kanban-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kanban}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-test_kanban}
+      TZ: Asia/Shanghai
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-test_kanban}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    # 数据库只在内网可达，不映射到宿主机端口
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ../backend
+    image: test-kanban-api:${IMAGE_TAG:-latest}
+    container_name: test-kanban-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kanban}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-test_kanban}
+      JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: 3000
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-系统管理员}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?请在 .env 中设置 ADMIN_INITIAL_PASSWORD}
+      TZ: Asia/Shanghai
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # 未带 token 访问受保护接口会得到 401，能返回 401 就说明 API already up
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/auth/me').then(r=>process.exit(r.status===401?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - internal
+
+  web:
+    build:
+      context: ../frontend
+    image: test-kanban-web:${IMAGE_TAG:-latest}
+    container_name: test-kanban-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - internal
+
+volumes:
+  # 固定卷名，不随 compose 项目名变化，避免重建时数据"消失"
+  pg_data:
+    name: test_kanban_pg_data
+
+networks:
+  internal:
+    driver: bridge

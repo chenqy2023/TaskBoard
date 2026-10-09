@@ -1,0 +1,71 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  background: #f0f2f5;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.page {
+  padding: 16px 20px 32px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.page-subtitle {
+  margin: 4px 0 0;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.text-muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.text-danger {
+  color: #ff4d4f;
+}
+
+.mono {
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+}
+
+/* 看板横向滚动容器 */
+.board-scroll {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}

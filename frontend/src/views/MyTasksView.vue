@@ -1,0 +1,175 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { message } from 'ant-design-vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
+import dayjs from 'dayjs';
+import type { Priority, TaskStatus, TaskView, User } from '@/types';
+import { tasksApi, usersApi } from '@/api';
+import { errorText } from '@/api/http';
+import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, priorityColor, progressColor } from '@/utils/labels';
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue';
+import TaskFormModal from '@/components/TaskFormModal.vue';
+
+const router = useRouter();
+const tasks = ref<TaskView[]>([]);
+const users = ref<User[]>([]);
+const loading = ref(false);
+const detailOpen = ref(false);
+const detailTask = ref<TaskView | null>(null);
+const formOpen = ref(false);
+const editingTask = ref<TaskView | null>(null);
+
+const groups = computed(() => {
+  const today = dayjs().format('YYYY-MM-DD');
+  const overdue: TaskView[] = [];
+  const soon: TaskView[] = [];
+  const normal: TaskView[] = [];
+  const noDue: TaskView[] = [];
+
+  for (const task of tasks.value) {
+    if (!task.dueDate) {
+      noDue.push(task);
+    } else if (task.dueDate < today) {
+      overdue.push(task);
+    } else if (dayjs(task.dueDate).diff(dayjs(today), 'day') <= 3) {
+      soon.push(task);
+    } else {
+      normal.push(task);
+    }
+  }
+
+  return [
+    { key: 'overdue', title: '已逾期', color: '#ff4d4f', tasks: overdue },
+    { key: 'soon', title: '3 天内到期', color: '#faad14', tasks: soon },
+    { key: 'normal', title: '进行中', color: '#1677ff', tasks: normal },
+    { key: 'noDue', title: '未设截止日期', color: '#8c8c8c', tasks: noDue },
+  ].filter((group) => group.tasks.length > 0);
+});
+
+async function load() {
+  loading.value = true;
+  try {
+    const [list, userList] = await Promise.all([tasksApi.my(), usersApi.list()]);
+    tasks.value = list;
+    users.value = userList;
+  } catch (error) {
+    message.error(errorText(error, '加载我的待办失败'));
+  } finally {
+    loading.value = false;
+  }
+}
+
+function openDetail(task: TaskView) {
+  detailTask.value = task;
+  detailOpen.value = true;
+}
+
+async function openProject(task: TaskView) {
+  if (task.version) await router.push({ name: 'board', params: { id: task.version.id } });
+}
+
+onMounted(load);
+</script>
+
+<template>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">我的待办</h2>
+        <p class="page-subtitle">分派给我且尚未完成的任务，按截止日期排序</p>
+      </div>
+      <a-button :loading="loading" @click="load">
+        <ReloadOutlined />
+        刷新
+      </a-button>
+    </div>
+
+    <a-spin :spinning="loading">
+      <a-empty v-if="tasks.length === 0" description="太好了，当前没有待办任务" />
+
+      <a-card v-for="group in groups" :key="group.key" size="small" style="margin-bottom: 12px">
+        <template #title>
+          <span class="group-dot" :style="{ background: group.color }" />
+          {{ group.title }}
+          <a-tag style="margin-left: 6px">{{ group.tasks.length }}</a-tag>
+        </template>
+
+        <a-list :data-source="group.tasks" size="small">
+          <template #renderItem="{ item }">
+            <a-list-item>
+              <a-list-item-meta>
+                <template #title>
+                  <a @click="openDetail(item)">{{ item.title }}</a>
+                  <a-tag v-if="item.version" style="margin-left: 8px" @click="openProject(item)">
+                    {{ item.version.name }}
+                  </a-tag>
+                </template>
+                <template #description>
+                  <span class="text-muted">
+                    {{ item.module || '未分模块' }} · 截止 {{ item.dueDate ?? '未设置' }}
+                  </span>
+                </template>
+              </a-list-item-meta>
+
+              <template #actions>
+                <a-tag :color="TASK_STATUS_COLORS[item.status as TaskStatus]">
+                  {{ TASK_STATUS_LABELS[item.status as TaskStatus] }}
+                </a-tag>
+                <span :style="{ color: priorityColor(item.priority as Priority), fontWeight: 600 }">
+                  {{ item.priority }}
+                </span>
+                <div class="mini-progress">
+                  <a-progress
+                    :percent="item.progress"
+                    size="small"
+                    :stroke-color="progressColor(item.status, item.progress)"
+                    :show-info="false"
+                  />
+                  <span class="percent">{{ item.progress }}%</span>
+                </div>
+              </template>
+            </a-list-item>
+          </template>
+        </a-list>
+      </a-card>
+    </a-spin>
+
+    <TaskDetailDrawer v-model:open="detailOpen" :task="detailTask" @changed="load" @edit="(task) => { editingTask = task; formOpen = true; }" />
+    <TaskFormModal
+      v-model:open="formOpen"
+      :version-id="editingTask?.versionId ?? ''"
+      :task="editingTask"
+      :users="users"
+      :modules="[]"
+      @saved="load"
+    />
+  </div>
+</template>
+
+<style scoped>
+.group-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.mini-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 120px;
+}
+
+.mini-progress :deep(.ant-progress) {
+  margin: 0;
+}
+
+.percent {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+</style>

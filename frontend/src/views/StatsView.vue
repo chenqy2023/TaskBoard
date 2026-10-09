@@ -1,0 +1,174 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { message } from 'ant-design-vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
+import type { VersionStats, VersionView } from '@/types';
+import { statsApi, versionsApi } from '@/api';
+import { errorText } from '@/api/http';
+import VersionTabs from '@/components/VersionTabs.vue';
+import ProgressSummary from '@/components/ProgressSummary.vue';
+import EChart from '@/components/EChart.vue';
+import type { EChartsOption } from 'echarts';
+
+const route = useRoute();
+const versionId = computed(() => String(route.params.id ?? ''));
+
+const version = ref<VersionView | null>(null);
+const stats = ref<VersionStats | null>(null);
+const loading = ref(false);
+
+const STATUS_COLOR_MAP: Record<string, string> = {
+  未开始: '#8c8c8c',
+  进行中: '#1677ff',
+  阻塞: '#ff4d4f',
+  已完成: '#52c41a',
+};
+
+const PRIORITY_COLOR_MAP: Record<string, string> = {
+  'P0 紧急': '#cf1322',
+  'P1 高': '#fa8c16',
+  'P2 中': '#1677ff',
+  'P3 低': '#8c8c8c',
+};
+
+const statusOption = computed<EChartsOption>(() => ({
+  tooltip: { trigger: 'item', formatter: '{b}: {c} 个（{d}%）' },
+  legend: { bottom: 0, icon: 'circle' },
+  series: [
+    {
+      type: 'pie',
+      radius: ['42%', '68%'],
+      center: ['50%', '44%'],
+      avoidLabelOverlap: true,
+      label: { formatter: '{b}\n{c}' },
+      data: (stats.value?.byStatus ?? [])
+        .filter((item) => item.count > 0)
+        .map((item) => ({
+          name: item.label,
+          value: item.count,
+          itemStyle: { color: STATUS_COLOR_MAP[item.label] },
+        })),
+    },
+  ],
+}));
+
+const priorityOption = computed<EChartsOption>(() => ({
+  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+  grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
+  xAxis: { type: 'value', minInterval: 1 },
+  yAxis: {
+    type: 'category',
+    data: (stats.value?.byPriority ?? []).map((item) => item.label).reverse(),
+  },
+  series: [
+    {
+      type: 'bar',
+      barWidth: 18,
+      label: { show: true, position: 'right' },
+      data: (stats.value?.byPriority ?? [])
+        .map((item) => ({ value: item.count, itemStyle: { color: PRIORITY_COLOR_MAP[item.label] } }))
+        .reverse(),
+    },
+  ],
+}));
+
+const assigneeOption = computed<EChartsOption>(() => {
+  const rows = stats.value?.byAssignee ?? [];
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 0, data: ['任务数', '平均进度'] },
+    grid: { left: 8, right: 16, top: 24, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: rows.map((item) => item.label), axisLabel: { interval: 0, rotate: rows.length > 6 ? 25 : 0 } },
+    yAxis: [
+      { type: 'value', name: '任务数', minInterval: 1 },
+      { type: 'value', name: '进度%', max: 100, min: 0 },
+    ],
+    series: [
+      { name: '任务数', type: 'bar', barWidth: 20, data: rows.map((item) => item.total), itemStyle: { color: '#1677ff' } },
+      {
+        name: '平均进度',
+        type: 'line',
+        yAxisIndex: 1,
+        smooth: true,
+        symbolSize: 7,
+        data: rows.map((item) => item.avgProgress),
+        itemStyle: { color: '#fa8c16' },
+      },
+    ],
+  };
+});
+
+const moduleOption = computed<EChartsOption>(() => {
+  const rows = [...(stats.value?.byModule ?? [])].reverse();
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { bottom: 0, data: ['总任务数', '已完成'] },
+    grid: { left: 8, right: 16, top: 24, bottom: 40, containLabel: true },
+    xAxis: { type: 'category', data: rows.map((item) => item.label) },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [
+      { name: '总任务数', type: 'bar', barWidth: 18, data: rows.map((item) => item.total), itemStyle: { color: '#91caff' } },
+      { name: '已完成', type: 'bar', barWidth: 18, data: rows.map((item) => item.done), itemStyle: { color: '#52c41a' } },
+    ],
+  };
+});
+
+async function load() {
+  const id = versionId.value;
+  if (!id) return;
+  loading.value = true;
+  try {
+    const [versionData, statsData] = await Promise.all([versionsApi.get(id), statsApi.byVersion(id)]);
+    version.value = versionData;
+    stats.value = statsData;
+  } catch (error) {
+    message.error(errorText(error, '加载统计失败'));
+  } finally {
+    loading.value = false;
+  }
+}
+
+watch(versionId, load);
+onMounted(load);
+</script>
+
+<template>
+  <div class="page">
+    <VersionTabs v-if="version" :version="version" />
+
+    <div class="toolbar" style="margin: 8px 0 12px">
+      <a-button size="small" :loading="loading" @click="load">
+        <ReloadOutlined />
+        刷新
+      </a-button>
+    </div>
+
+    <a-spin :spinning="loading">
+      <a-card size="small" title="总体进度" style="margin-bottom: 12px">
+        <ProgressSummary :summary="stats?.summary ?? null" show-status-breakdown />
+      </a-card>
+
+      <a-row :gutter="12">
+        <a-col :span="12">
+          <a-card size="small" title="状态分布">
+            <EChart v-if="stats" :option="statusOption" />
+          </a-card>
+        </a-col>
+        <a-col :span="12">
+          <a-card size="small" title="优先级分布">
+            <EChart v-if="stats" :option="priorityOption" />
+          </a-card>
+        </a-col>
+      </a-row>
+
+      <a-card size="small" title="各负责人任务数与平均进度" style="margin-top: 12px">
+        <EChart v-if="stats" :option="assigneeOption" height="320px" />
+      </a-card>
+
+      <a-card size="small" title="各模块任务数与完成情况" style="margin-top: 12px">
+        <EChart v-if="stats" :option="moduleOption" height="320px" />
+      </a-card>
+    </a-spin>
+  </div>
+</template>

@@ -1,0 +1,149 @@
+// 测试任务看板 - 数据模型
+// 约定：库内时间统一存 UTC，展示层按 Asia/Shanghai 处理。
+// 层级：版本(Version) -> 任务(Task)，任务下挂评论(Comment)与操作日志(ActivityLog)。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum VersionStatus {
+  TESTING // 测试中
+  RELEASED // 已发布
+  ARCHIVED // 已归档
+}
+
+enum TaskStatus {
+  TODO // 未开始
+  IN_PROGRESS // 进行中
+  BLOCKED // 阻塞
+  DONE // 已完成
+}
+
+enum Priority {
+  P0 // 紧急
+  P1 // 高
+  P2 // 中
+  P3 // 低
+}
+
+enum ActivityAction {
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_DELETED
+  STATUS_CHANGED
+  ASSIGNEE_CHANGED
+  PRIORITY_CHANGED
+  DUE_DATE_CHANGED
+  PROGRESS_CHANGED
+  COMMENT_ADDED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  passwordHash String
+  role         Role     @default(MEMBER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdVersions Version[]     @relation("VersionCreatedBy")
+  assignedTasks   Task[]        @relation("TaskAssignee")
+  createdTasks    Task[]        @relation("TaskCreatedBy")
+  comments        Comment[]
+  activities      ActivityLog[]
+
+  @@map("users")
+}
+
+model Version {
+  id                 String        @id @default(cuid())
+  name               String        @unique
+  description        String?
+  status             VersionStatus @default(TESTING)
+  testStartDate      DateTime?
+  plannedReleaseDate DateTime?
+  createdById        String
+  createdBy          User          @relation("VersionCreatedBy", fields: [createdById], references: [id])
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  tasks Task[]
+
+  @@index([status])
+  @@map("versions")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  versionId   String
+  version     Version    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  module      String     @default("")
+  assigneeId  String?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  priority    Priority   @default(P2)
+  status      TaskStatus @default(TODO)
+  /// 手动填写 0-100
+  progress    Int        @default(0)
+  dueDate     DateTime?
+  /// 看板列内排序，越小越靠前
+  sortIndex   Int        @default(0)
+  createdById String
+  createdBy   User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  completedAt DateTime?
+  /// 软删除，保留操作日志可追溯
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  comments   Comment[]
+  activities ActivityLog[]
+
+  @@index([versionId, status, sortIndex])
+  @@index([assigneeId])
+  @@index([deletedAt])
+  @@map("tasks")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+
+  @@index([taskId, createdAt])
+  @@map("comments")
+}
+
+model ActivityLog {
+  id        String         @id @default(cuid())
+  taskId    String
+  task      Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User           @relation(fields: [actorId], references: [id])
+  action    ActivityAction
+  field     String?
+  fromValue String?
+  toValue   String?
+  createdAt DateTime       @default(now())
+
+  @@index([taskId, createdAt])
+  @@map("activity_logs")
+}
