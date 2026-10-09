@@ -33,7 +33,7 @@ const dateRange = computed(() => {
 <template>
   <div class="version-head">
     <div class="version-title">
-      <router-link to="/versions" class="back">版本管理</router-link>
+      <router-link to="/versions" class="back">全部版本</router-link>
       <a-divider type="vertical" />
       <span class="name">{{ version.name }}</span>
       <a-tag :color="VERSION_STATUS_COLORS[version.status]">

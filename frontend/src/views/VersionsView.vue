@@ -2,14 +2,24 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue';
-import dayjs from 'dayjs';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons-vue';
 import type { VersionStatus, VersionView } from '@/types';
 import { versionsApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useAuthStore } from '@/stores/auth';
-import { VERSION_STATUS_COLORS, VERSION_STATUS_LABELS } from '@/utils/labels';
-import VersionProgress from '@/components/VersionProgress.vue';
+import {
+  VERSION_STATUS_COLORS,
+  VERSION_STATUS_LABELS,
+  coverGradient,
+  progressColor,
+} from '@/utils/labels';
 import VersionFormModal from '@/components/VersionFormModal.vue';
 
 const router = useRouter();
@@ -21,8 +31,6 @@ const filters = reactive<{ status?: VersionStatus; keyword: string }>({ keyword:
 
 const formOpen = ref(false);
 const editing = ref<VersionView | null>(null);
-
-const today = dayjs().format('YYYY-MM-DD');
 
 async function load() {
   loading.value = true;
@@ -40,79 +48,16 @@ async function load() {
 
 const filtering = computed(() => !!filters.status || !!filters.keyword.trim());
 
-function clearFilters() {
-  filters.status = undefined;
-  filters.keyword = '';
-  void load();
-}
-
-/* ---------- 概览条：只统计当前列表，筛选时明确标出，不假装是全量 ---------- */
+/** 概览压成一行文字，不再占一整条——首页以卡片墙为主 */
 const overview = computed(() => {
   const list = versions.value;
-  const testing = list.filter((item) => item.status === 'TESTING');
-  const released = list.filter((item) => item.status === 'RELEASED');
-  const archived = list.filter((item) => item.status === 'ARCHIVED').length;
-  const taskTotal = list.reduce((sum, item) => sum + item.summary.total, 0);
-  const blockedTasks = list.reduce((sum, item) => sum + (item.summary.byStatus?.BLOCKED ?? 0), 0);
-  const riskyVersions = list.filter((item) => (item.summary.byStatus?.BLOCKED ?? 0) > 0).length;
-  const avgOfTesting =
-    testing.length === 0
-      ? 0
-      : Math.round(testing.reduce((sum, item) => sum + item.summary.avgProgress, 0) / testing.length);
-
-  return { total: list.length, testing: testing.length, released: released.length, archived, taskTotal, blockedTasks, riskyVersions, avgOfTesting };
+  return {
+    total: list.length,
+    testing: list.filter((item) => item.status === 'TESTING').length,
+    released: list.filter((item) => item.status === 'RELEASED').length,
+    risky: list.filter((item) => (item.summary.byStatus?.BLOCKED ?? 0) > 0).length,
+  };
 });
-
-/* ---------- 测试周期：把两个日期表达成一段跨度，并标出已超计划 ---------- */
-interface CycleInfo {
-  text: string;
-  hint: string;
-  overdue: boolean;
-}
-
-function cycleOf(version: VersionView): CycleInfo {
-  const start = version.testStartDate;
-  const end = version.plannedReleaseDate;
-  if (!start && !end) return { text: '未排期', hint: '未填提测与发布计划', overdue: false };
-
-  const arrow = `${start ?? '待定'} → ${end ?? '待定'}`;
-  if (start && end) {
-    const days = dayjs(end).diff(dayjs(start), 'day');
-    const overdue = version.status === 'TESTING' && end < today;
-    return { text: arrow, hint: overdue ? `已超计划发布日 ${dayjs(today).diff(dayjs(end), 'day')} 天` : `计划 ${days} 天`, overdue };
-  }
-  if (start) {
-    return { text: arrow, hint: `已进行 ${dayjs(today).diff(dayjs(start), 'day')} 天`, overdue: false };
-  }
-  return { text: arrow, hint: '未填提测日期', overdue: false };
-}
-
-/** 有阻塞任务的行标红，已超计划的标橙，让"哪个版本要出事"一眼可见 */
-function rowClassName(version: VersionView) {
-  if ((version.summary.byStatus?.BLOCKED ?? 0) > 0) return 'row-risk';
-  if (cycleOf(version).overdue) return 'row-attention';
-  return '';
-}
-
-const columns = [
-  { title: '版本', key: 'name', dataIndex: 'name', width: 258, sorter: (a: VersionView, b: VersionView) => a.name.localeCompare(b.name, 'zh-Hans-CN') },
-  { title: '状态', key: 'status', dataIndex: 'status', width: 96 },
-  {
-    title: '测试进度',
-    key: 'summary',
-    width: 356,
-    sorter: (a: VersionView, b: VersionView) => a.summary.avgProgress - b.summary.avgProgress,
-  },
-  {
-    title: '提测 → 计划发布',
-    key: 'cycle',
-    width: 250,
-    sorter: (a: VersionView, b: VersionView) =>
-      (a.testStartDate ?? '9999').localeCompare(b.testStartDate ?? '9999'),
-  },
-  { title: '说明', key: 'description', width: 226, ellipsis: true },
-  { title: '操作', key: 'action', width: 152, fixed: 'right' as const },
-];
 
 function openCreate() {
   editing.value = null;
@@ -154,206 +99,363 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">版本管理</h2>
-        <p class="page-subtitle">每个版本一个测试看板，进度由该版本下任务的平均进度与完成率汇总</p>
-      </div>
-      <div class="toolbar">
-        <a-input
-          v-model:value="filters.keyword"
-          placeholder="搜索版本号"
-          allow-clear
-          style="width: 190px"
-          @press-enter="load"
-        >
-          <template #prefix><SearchOutlined class="text-muted" /></template>
-        </a-input>
-        <a-select
-          v-model:value="filters.status"
-          placeholder="版本状态"
-          allow-clear
-          style="width: 130px"
-          :options="Object.entries(VERSION_STATUS_LABELS).map(([value, label]) => ({ value, label }))"
-          @change="load"
-        />
-        <a-button :loading="loading" @click="load">
-          <ReloadOutlined />
-          刷新
-        </a-button>
-        <a-button type="primary" @click="openCreate">
-          <PlusOutlined />
-          新建版本
-        </a-button>
-      </div>
-    </div>
-
-    <div class="stat-strip">
-      <div class="stat">
-        <div class="stat-label">版本总数</div>
-        <div class="stat-value">
-          {{ overview.total }}<span class="unit">个</span>
-        </div>
-        <div class="stat-hint">{{ filtering ? '当前筛选结果' : `共 ${overview.taskTotal} 个任务` }}</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-label">
-          <i class="dot" style="background: var(--tk-brand)" />
-          测试中
-        </div>
-        <div class="stat-value">
-          {{ overview.testing }}<span class="unit">个</span>
-        </div>
-        <div class="stat-hint">平均进度 {{ overview.avgOfTesting }}%</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-label">
-          <i class="dot" style="background: var(--tk-success)" />
-          已发布
-        </div>
-        <div class="stat-value">
-          {{ overview.released }}<span class="unit">个</span>
-        </div>
-        <div class="stat-hint">已归档 {{ overview.archived }} 个</div>
-      </div>
-
-      <div class="stat">
-        <div class="stat-label">
-          <i
-            class="dot"
-            :style="{ background: overview.blockedTasks ? 'var(--tk-danger)' : 'var(--tk-ink-4)' }"
-          />
-          需要关注
-        </div>
-        <div class="stat-value" :class="{ 'text-danger': overview.blockedTasks > 0 }">
-          {{ overview.riskyVersions }}<span class="unit">个</span>
-        </div>
-        <div class="stat-hint">
-          {{ overview.blockedTasks > 0 ? `阻塞 ${overview.blockedTasks} 个任务` : '暂无阻塞任务' }}
-        </div>
-      </div>
-    </div>
-
-    <a-card class="tk-surface" :body-style="{ padding: 0 }">
-      <a-table
-        :data-source="versions"
-        :columns="columns"
-        :loading="loading"
-        row-key="id"
-        :row-class-name="rowClassName"
-        :pagination="{
-          pageSize: 10,
-          showSizeChanger: false,
-          hideOnSinglePage: true,
-          showTotal: (total: number) => `共 ${total} 个版本`,
-        }"
-        :scroll="{ x: 1340 }"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'name'">
-            <a class="version-name" @click="openBoard(record)">{{ record.name }}</a>
-            <div class="version-meta text-muted">
-              {{ record.createdBy?.displayName ?? '—' }} · {{ record.createdAt.slice(0, 10) }}
-            </div>
-          </template>
-
-          <template v-else-if="column.key === 'status'">
-            <a-tag :color="VERSION_STATUS_COLORS[record.status as VersionStatus]">
-              {{ VERSION_STATUS_LABELS[record.status as VersionStatus] }}
-            </a-tag>
-          </template>
-
-          <template v-else-if="column.key === 'summary'">
-            <VersionProgress :summary="record.summary" />
-          </template>
-
-          <template v-else-if="column.key === 'cycle'">
-            <div class="cycle">
-              <div class="cycle-range num">
-                {{ cycleOf(record).text }}
-              </div>
-              <div
-                class="cycle-hint"
-                :class="cycleOf(record).overdue ? 'text-danger' : 'text-muted'"
-              >
-                {{ cycleOf(record).hint }}
-              </div>
-            </div>
-          </template>
-
-          <template v-else-if="column.key === 'description'">
-            <span v-if="record.description" :title="record.description" class="text-muted">
-              {{ record.description }}
+  <div class="page page--home">
+    <div class="home-inner">
+      <div class="home-head">
+        <div>
+          <h2 class="home-title">版本</h2>
+          <p class="home-summary">
+            共 <b class="num">{{ overview.total }}</b> 个版本 ·
+            测试中 <b class="num">{{ overview.testing }}</b> ·
+            已发布 <b class="num">{{ overview.released }}</b> ·
+            <span :class="{ risky: overview.risky > 0 }">
+              需关注 <b class="num">{{ overview.risky }}</b>
             </span>
-            <span v-else class="text-muted">—</span>
-          </template>
+            <span v-if="filtering" class="filter-note">（当前为筛选结果）</span>
+          </p>
+        </div>
 
-          <template v-else-if="column.key === 'action'">
-            <div class="row-actions">
-              <a @click="openBoard(record)">看板</a>
-              <a @click="openEdit(record)">编辑</a>
-              <a v-if="auth.isAdmin" class="text-danger" @click="remove(record)">删除</a>
-            </div>
-          </template>
-        </template>
-
-        <template #emptyText>
-          <a-empty
-            :description="filtering ? '没有符合筛选条件的版本' : '还没有版本，先建一个开始记录测试进度'"
+        <div class="home-tools">
+          <a-input
+            v-model:value="filters.keyword"
+            placeholder="搜索版本号"
+            allow-clear
+            style="width: 190px"
+            @press-enter="load"
           >
-            <a-button v-if="filtering" @click="clearFilters">清除筛选</a-button>
-            <a-button v-else type="primary" @click="openCreate">新建版本</a-button>
-          </a-empty>
-        </template>
-      </a-table>
-    </a-card>
+            <template #prefix><SearchOutlined class="text-muted" /></template>
+          </a-input>
+          <a-select
+            v-model:value="filters.status"
+            placeholder="版本状态"
+            allow-clear
+            style="width: 130px"
+            :options="Object.entries(VERSION_STATUS_LABELS).map(([value, label]) => ({ value, label }))"
+            @change="load"
+          />
+          <a-tooltip title="刷新">
+            <a-button :loading="loading" @click="load">
+              <ReloadOutlined />
+            </a-button>
+          </a-tooltip>
+        </div>
+      </div>
+
+      <a-spin :spinning="loading">
+        <div class="card-grid">
+          <article
+            v-for="version in versions"
+            :key="version.id"
+            class="vcard"
+            @click="openBoard(version)"
+          >
+            <!-- 封面：按版本号稳定取一个渐变，版本名压在封面上 -->
+            <div class="vcard-cover" :style="{ background: coverGradient(version.name) }">
+              <span class="vcard-count num" :title="`${version.summary.total} 个任务`">
+                {{ version.summary.total }}
+              </span>
+              <span class="vcard-name">{{ version.name }}</span>
+
+              <a-dropdown v-if="auth.isAdmin" :trigger="['click']">
+                <button class="vcard-more" type="button" title="更多操作" @click.stop>
+                  <MoreOutlined />
+                </button>
+                <template #overlay>
+                  <a-menu>
+                    <a-menu-item key="edit" @click="openEdit(version)">
+                      <EditOutlined />
+                      <span style="margin-left: 6px">编辑版本</span>
+                    </a-menu-item>
+                    <a-menu-item key="delete" danger @click="remove(version)">
+                      <DeleteOutlined />
+                      <span style="margin-left: 6px">删除版本</span>
+                    </a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </div>
+
+            <div class="vcard-body">
+              <div class="vcard-row">
+                <a-tag :color="VERSION_STATUS_COLORS[version.status]" class="vcard-status">
+                  {{ VERSION_STATUS_LABELS[version.status] }}
+                </a-tag>
+                <span class="vcard-rate">
+                  完成率 <b class="num">{{ version.summary.completionRate }}%</b>
+                  <span class="text-muted num">（{{ version.summary.done }}/{{ version.summary.total }}）</span>
+                </span>
+              </div>
+
+              <div class="vcard-progress">
+                <a-progress
+                  :percent="version.summary.avgProgress"
+                  size="small"
+                  :stroke-color="progressColor('IN_PROGRESS', version.summary.avgProgress)"
+                  :show-info="false"
+                />
+                <span class="vcard-avg num">{{ version.summary.avgProgress }}%</span>
+              </div>
+
+              <div class="vcard-dates num">
+                <span>{{ version.testStartDate ?? '待定' }}</span>
+                <span class="sep">→</span>
+                <span>{{ version.plannedReleaseDate ?? '待定' }}</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- 建版本入口做成网格里的最后一张卡，和参考稿一致 -->
+          <button class="vcard vcard-new" type="button" @click="openCreate">
+            <span class="vcard-new-icon"><PlusOutlined /></span>
+            <span class="vcard-new-text">创建版本</span>
+          </button>
+        </div>
+
+        <div v-if="versions.length === 0 && !loading" class="home-empty">
+          {{ filtering ? '没有符合筛选条件的版本' : '还没有版本，点上面「创建版本」开始' }}
+        </div>
+      </a-spin>
+    </div>
 
     <VersionFormModal v-model:open="formOpen" :version="editing" @saved="load" />
   </div>
 </template>
 
 <style scoped>
-.version-name {
-  display: inline-block;
-  font-family: var(--tk-num);
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-  line-height: 20px;
+/* 首页沿用看板那套深色工作区，卡片浮在上面 */
+.page--home {
+  /* 深色底要通栏：.page 自带 max-width 与居中，这里必须放开，
+     否则两侧会露出浅色页面底。限宽交给内部的 .home-inner */
+  max-width: none;
+  min-height: calc(100vh - var(--tk-header-h));
+  padding: 26px 20px 48px;
+  background: var(--tk-canvas);
 }
 
-.version-meta {
-  font-size: 12px;
-  margin-top: 2px;
+.home-inner {
+  max-width: var(--tk-board-max);
+  margin: 0 auto;
 }
 
-.cycle {
-  line-height: 1.5;
+.home-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
-.cycle-range {
+.home-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.home-summary {
+  margin: 6px 0 0;
   font-size: 13px;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.home-summary b {
+  color: #fff;
+  font-weight: 600;
+}
+
+.home-summary .risky,
+.home-summary .risky b {
+  color: #ff9c9c;
+}
+
+.filter-note {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.home-empty {
+  margin-top: 20px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- 卡片墙 ---------- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  gap: 16px;
+}
+
+.vcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tk-radius-md);
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(8, 20, 32, 0.28);
+  transition: transform 0.16s, box-shadow 0.16s;
+}
+
+.vcard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(8, 20, 32, 0.38);
+}
+
+.vcard-cover {
+  position: relative;
+  height: 96px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.vcard-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  word-break: break-word;
+}
+
+/* 任务数徽章压在封面右上角 */
+.vcard-count {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--tk-radius-sm);
+  background: rgba(0, 0, 0, 0.42);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 19px;
+  text-align: center;
+}
+
+/* 管理操作在悬停时才出现，平时不干扰看封面 */
+.vcard-more {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--tk-radius-sm);
+  background: rgba(0, 0, 0, 0.34);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.vcard:hover .vcard-more,
+.vcard-more:focus-visible {
+  opacity: 1;
+}
+
+.vcard-more:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.vcard-body {
+  padding: 10px 14px 12px;
+}
+
+.vcard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vcard-status {
+  margin-inline-end: 0;
+  flex: none;
+}
+
+.vcard-rate {
+  font-size: 12px;
   color: var(--tk-ink-2);
   white-space: nowrap;
 }
 
-.cycle-hint {
-  font-size: 12px;
+.vcard-rate b {
+  color: var(--tk-ink);
+  font-weight: 600;
 }
 
-/* 操作列：给足宽度并禁止折行，避免"看板"被挤成竖排两字 */
-.row-actions {
+.vcard-progress {
   display: flex;
   align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
-.row-actions a {
+.vcard-progress :deep(.ant-progress) {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+
+.vcard-avg {
+  font-size: 12px;
+  color: var(--tk-ink-3);
   flex: none;
+}
+
+.vcard-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--tk-ink-2);
+}
+
+.vcard-dates .sep {
+  color: var(--tk-ink-4);
+}
+
+/* 末尾的「创建版本」卡 */
+.vcard-new {
+  min-height: 178px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+  color: #fff;
+}
+
+.vcard-new:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.vcard-new-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  font-size: 17px;
+}
+
+.vcard-new-text {
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>

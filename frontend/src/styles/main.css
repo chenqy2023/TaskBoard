@@ -54,7 +54,6 @@
   --tk-shadow-card: 0 1px 3px rgba(9, 30, 66, 0.12), 0 0 1px rgba(9, 30, 66, 0.12);
   --tk-shadow-card-hover: 0 4px 10px rgba(9, 30, 66, 0.16);
   --tk-shadow-panel: 0 6px 16px rgba(9, 30, 66, 0.16);
-  --tk-shadow-header: 0 1px 4px rgba(0, 21, 41, 0.08);
 
   /* 看板画布：看板页是一块浮起的渐变板面，列是上面的白色面板。
      觉得太跳就改这一个值（例如换成浅色渐变），或整块去掉 */

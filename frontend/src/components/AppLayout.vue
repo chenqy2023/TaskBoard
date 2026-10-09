@@ -2,15 +2,7 @@
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
-import {
-  AppstoreOutlined,
-  HeartOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  TeamOutlined,
-  UserOutlined,
-} from '@ant-design/icons-vue';
+import { HeartOutlined, LogoutOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/api';
 import { errorText } from '@/api/http';
@@ -18,13 +10,26 @@ import { errorText } from '@/api/http';
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const collapsed = ref(false);
 
-const selectedKeys = computed(() => {
-  if (route.path.startsWith('/versions')) return ['versions'];
-  if (route.path.startsWith('/my')) return ['my'];
-  if (route.path.startsWith('/users')) return ['users'];
-  return [];
+/**
+ * 导航直接在顶栏里，不再有左侧栏——
+ * 首页是版本卡片墙，进到某个版本后再用版本内的页签切换看板/列表/统计。
+ */
+const navItems = computed(() => {
+  const items: { key: string; label: string; to: string; icon?: unknown }[] = [
+    { key: 'home', label: '版本', to: '/' },
+    { key: 'my', label: '我的待办', to: '/my', icon: HeartOutlined },
+  ];
+  if (auth.isAdmin) {
+    items.push({ key: 'users', label: '成员管理', to: '/users', icon: TeamOutlined });
+  }
+  return items;
+});
+
+const activeKey = computed(() => {
+  if (route.path.startsWith('/my')) return 'my';
+  if (route.path.startsWith('/users')) return 'users';
+  return 'home';
 });
 
 const pwdOpen = ref(false);
@@ -71,41 +76,29 @@ async function submitPassword() {
 </script>
 
 <template>
-  <a-layout style="min-height: 100vh">
-    <a-layout-sider v-model:collapsed="collapsed" collapsible :trigger="null" theme="dark" width="200">
-      <div class="brand">
-        <span class="brand-mark">TK</span>
-        <span v-if="!collapsed" class="brand-text">测试任务看板</span>
-      </div>
-      <a-menu v-model:selectedKeys="selectedKeys" theme="dark" mode="inline">
-        <a-menu-item key="versions" @click="router.push('/versions')">
-          <AppstoreOutlined />
-          <span>版本管理</span>
-        </a-menu-item>
-        <a-menu-item key="my" @click="router.push('/my')">
-          <HeartOutlined />
-          <span>我的待办</span>
-        </a-menu-item>
-        <a-menu-item v-if="auth.isAdmin" key="users" @click="router.push('/users')">
-          <TeamOutlined />
-          <span>成员管理</span>
-        </a-menu-item>
-      </a-menu>
-    </a-layout-sider>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-inner">
+        <!-- 点品牌名回首页（版本卡片墙），替代原来侧栏的「版本管理」入口 -->
+        <router-link to="/" class="brand">
+          <span class="brand-mark">TK</span>
+          <span class="brand-text">测试任务看板</span>
+        </router-link>
 
-    <a-layout>
-      <a-layout-header class="app-header">
-        <!-- 顶栏底色通栏，内容按同一内容区上限居中，保证用户名与页面右边缘对齐 -->
-        <div class="header-inner">
-          <div class="header-left">
-            <component
-              :is="collapsed ? MenuUnfoldOutlined : MenuFoldOutlined"
-              class="collapse-trigger"
-              @click="collapsed = !collapsed"
-            />
-            <span class="header-title">{{ route.meta.title }}</span>
-          </div>
-          <div class="header-right">
+        <nav class="header-nav">
+          <router-link
+            v-for="item in navItems"
+            :key="item.key"
+            :to="item.to"
+            class="nav-item"
+            :class="{ active: activeKey === item.key }"
+          >
+            <component :is="item.icon" v-if="item.icon" />
+            {{ item.label }}
+          </router-link>
+        </nav>
+
+        <div class="header-right">
           <a-dropdown>
             <a class="user-chip" @click.prevent>
               <UserOutlined />
@@ -125,15 +118,14 @@ async function submitPassword() {
               </a-menu>
             </template>
           </a-dropdown>
-          </div>
         </div>
-      </a-layout-header>
+      </div>
+    </header>
 
-      <a-layout-content>
-        <router-view />
-      </a-layout-content>
-    </a-layout>
-  </a-layout>
+    <main class="app-main">
+      <router-view />
+    </main>
+  </div>
 
   <a-modal
     v-model:open="pwdOpen"
@@ -158,15 +150,34 @@ async function submitPassword() {
 </template>
 
 <style scoped>
-.brand {
-  height: 56px;
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--tk-bg);
+}
+
+.app-header {
+  flex: none;
+  height: var(--tk-header-h);
+  background: var(--tk-chrome);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
+}
+
+.header-inner {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  color: #fff;
-  overflow: hidden;
-  white-space: nowrap;
+  gap: 24px;
+  padding: 0 20px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+  text-decoration: none;
 }
 
 .brand-mark {
@@ -177,6 +188,7 @@ async function submitPassword() {
   height: 28px;
   border-radius: var(--tk-radius-sm);
   background: var(--tk-brand);
+  color: #fff;
   font-weight: 700;
   font-size: 13px;
   flex: none;
@@ -185,49 +197,44 @@ async function submitPassword() {
 .brand-text {
   font-size: 15px;
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.94);
 }
 
-.app-header {
-  background: var(--tk-chrome);
-  padding: 0;
-  height: var(--tk-header-h);
-  line-height: var(--tk-header-h);
-  /* 深色外框不用浅色阴影，用一条更深的分隔线更干净 */
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
-}
-
-.header-inner {
-  max-width: var(--tk-content-max);
-  margin: 0 auto;
-  padding: 0 20px;
-  height: 100%;
+/* 顶栏导航：版本 / 我的待办 / 成员管理 */
+.header-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 4px;
+  min-width: 0;
 }
 
-.header-left {
-  display: flex;
+.nav-item {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--tk-radius-sm);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 }
 
-.collapse-trigger {
-  font-size: 18px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.78);
-  transition: color 0.15s;
-}
-
-.collapse-trigger:hover {
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
-.header-title {
-  font-size: 16px;
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.94);
+}
+
+.header-right {
+  margin-left: auto;
+  flex: none;
 }
 
 .user-chip {
@@ -240,5 +247,10 @@ async function submitPassword() {
 
 .user-chip:hover {
   color: #fff;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 </style>

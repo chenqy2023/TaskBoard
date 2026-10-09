@@ -18,6 +18,29 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 /**
+ * 版本卡片封面的渐变。按版本号散列稳定取一个，
+ * 同一个版本每次打开都是同一张封面，不会闪来闪去。
+ */
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+  'linear-gradient(135deg, #134e4a 0%, #14b8a6 100%)',
+  'linear-gradient(135deg, #4c1d95 0%, #a855f7 100%)',
+  'linear-gradient(135deg, #7c2d12 0%, #f97316 100%)',
+  'linear-gradient(135deg, #14532d 0%, #22c55e 100%)',
+  'linear-gradient(135deg, #831843 0%, #ec4899 100%)',
+  'linear-gradient(135deg, #1e293b 0%, #64748b 100%)',
+  'linear-gradient(135deg, #312e81 0%, #6366f1 100%)',
+];
+
+export function coverGradient(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 33 + seed.charCodeAt(i)) % 9973;
+  }
+  return COVER_GRADIENTS[hash % COVER_GRADIENTS.length];
+}
+
+/**
  * 头像底色的可选色板。用一个稳定的散列从姓名取色，
  * 保证同一个人在所有页面、所有时间都是同一个颜色。
  */
