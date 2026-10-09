@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
@@ -47,6 +47,38 @@ const dragSource = ref<{ task: TaskView; index: number } | null>(null);
 
 const totalShown = computed(() => TASK_STATUS_ORDER.reduce((sum, s) => sum + columns[s].length, 0));
 
+/** 汇总条上的状态计数：既是读数也是快捷筛选入口，省得再去上面的下拉里选一次 */
+const statusChips = computed(() =>
+  TASK_STATUS_ORDER.map((status) => ({
+    status,
+    label: TASK_STATUS_LABELS[status],
+    color: TASK_STATUS_BAR_COLORS[status],
+    count: summary.value?.byStatus?.[status] ?? 0,
+  })),
+);
+
+function toggleStatus(status?: TaskStatus) {
+  filters.value = { ...filters.value, status };
+}
+
+/* ---------- 看板撑满可用高度：按容器实际位置算，不写死偏移量 ---------- */
+const boardRef = ref<HTMLElement>();
+const boardHeight = ref(480);
+
+function measure() {
+  const el = boardRef.value;
+  if (!el) return;
+  const top = el.getBoundingClientRect().top;
+  boardHeight.value = Math.max(300, window.innerHeight - top - 40);
+}
+
+onMounted(() => {
+  measure();
+  window.addEventListener('resize', measure);
+});
+
+onBeforeUnmount(() => window.removeEventListener('resize', measure));
+
 async function loadAll() {
   const id = versionId.value;
   if (!id) return;
@@ -65,10 +97,11 @@ async function loadAll() {
     for (const status of TASK_STATUS_ORDER) columns[status] = [];
     for (const task of boardTasks) columns[task.status].push(task);
 
-    // 详情抽屉开着时同步最新数据
     if (detailTask.value) {
       detailTask.value = boardTasks.find((t) => t.id === detailTask.value!.id) ?? detailTask.value;
     }
+    await nextTick();
+    measure();
   } catch (error) {
     message.error(errorText(error, '加载看板失败'));
   } finally {
@@ -85,6 +118,8 @@ async function loadTasksAndSummary() {
   summary.value = summaryData;
   for (const status of TASK_STATUS_ORDER) columns[status] = [];
   for (const task of boardTasks) columns[task.status].push(task);
+  await nextTick();
+  measure();
 }
 
 const { connected } = useRealtime(() => versionId.value, async (event) => {
@@ -92,13 +127,17 @@ const { connected } = useRealtime(() => versionId.value, async (event) => {
   try {
     await loadTasksAndSummary();
   } catch {
-    /* 静默失败：下一次轮询或手动刷新会补上 */
+    /* 静默失败：手动刷新或下一次事件会补上 */
   }
 });
 
-watch(filters, () => {
-  void loadTasksAndSummary().catch((error) => message.error(errorText(error, '筛选失败')));
-}, { deep: true });
+watch(
+  filters,
+  () => {
+    void loadTasksAndSummary().catch((error) => message.error(errorText(error, '筛选失败')));
+  },
+  { deep: true },
+);
 
 watch(versionId, () => {
   void loadAll();
@@ -167,21 +206,47 @@ onMounted(loadAll);
   <div class="page">
     <VersionTabs v-if="version" :version="version" />
 
-    <a-card size="small" style="margin: 8px 0 12px">
+    <a-card size="small" class="tk-surface" style="margin: 8px 0 12px">
       <div class="summary-row">
-        <ProgressSummary :summary="summary" show-status-breakdown />
-        <div class="summary-side">
-          <a-tag :color="connected ? 'green' : 'default'">
-            {{ connected ? '实时同步中' : '实时未连接' }}
-          </a-tag>
-          <span class="text-muted">共 {{ totalShown }} 个任务</span>
+        <ProgressSummary :summary="summary" />
+
+        <div class="status-chips">
+          <span class="status-chip" :class="{ active: !filters.status }" @click="toggleStatus(undefined)">
+            全部
+            <b class="count num">{{ summary?.total ?? 0 }}</b>
+          </span>
+          <a-tooltip
+            v-for="chip in statusChips"
+            :key="chip.status"
+            :title="`只看「${chip.label}」的任务`"
+          >
+            <span
+              class="status-chip"
+              :class="{
+                active: filters.status === chip.status,
+                dim: chip.count === 0 && filters.status !== chip.status,
+              }"
+              @click="toggleStatus(filters.status === chip.status ? undefined : chip.status)"
+            >
+              <i class="dot" :style="{ background: chip.color }" />
+              {{ chip.label }}
+              <b class="count num">{{ chip.count }}</b>
+            </span>
+          </a-tooltip>
         </div>
       </div>
     </a-card>
 
     <div class="toolbar board-toolbar">
-      <FilterBar v-model:filters="filters" :users="users" />
+      <FilterBar v-model:filters="filters" :users="users" hide-status />
       <div class="toolbar-right">
+        <a-tooltip :title="connected ? '他人改动会实时推送到这里' : '实时通道未连接，改动需手动刷新'">
+          <span class="sync-state" :class="{ on: connected }">
+            <i class="dot" />
+            {{ connected ? '实时同步中' : '实时未连接' }}
+          </span>
+        </a-tooltip>
+        <span class="text-muted count-hint">当前 {{ totalShown }} 个任务</span>
         <a-button size="small" :loading="loading" @click="loadAll">
           <ReloadOutlined />
           刷新
@@ -202,14 +267,17 @@ onMounted(loadAll);
     </div>
 
     <a-spin :spinning="loading">
-      <div class="board-scroll">
+      <div ref="boardRef" class="board-scroll" :style="{ height: `${boardHeight}px` }">
         <div v-for="status in TASK_STATUS_ORDER" :key="status" class="column">
           <div class="column-head" :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }">
+            <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
             <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
-            <a-tag class="column-count">{{ columns[status].length }}</a-tag>
-            <a class="column-add" @click="openCreate(status)">
-              <PlusOutlined />
-            </a>
+            <span class="column-count num">{{ columns[status].length }}</span>
+            <a-tooltip :title="`在「${TASK_STATUS_LABELS[status]}」新建任务`">
+              <a class="column-add" @click="openCreate(status)">
+                <PlusOutlined />
+              </a>
+            </a-tooltip>
           </div>
 
           <draggable
@@ -268,15 +336,15 @@ onMounted(loadAll);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
-.summary-side {
+.status-chips {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .board-toolbar {
@@ -287,27 +355,59 @@ onMounted(loadAll);
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
+.sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--tk-ink-3);
+  white-space: nowrap;
+  cursor: help;
+}
+
+.sync-state .dot {
+  background: var(--tk-ink-4);
+}
+
+.sync-state.on {
+  color: var(--tk-success);
+}
+
+.sync-state.on .dot {
+  background: var(--tk-success);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.14);
+}
+
+.count-hint {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 列自适应铺满：列少时均分宽度，列多时收到 268px 再横向滚动 */
 .column {
-  width: 300px;
-  flex: none;
+  flex: 1 1 0;
+  min-width: 268px;
+  max-width: 420px;
   background: #fafafa;
+  border: 1px solid var(--tk-line);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 340px);
+  min-height: 0;
 }
 
 .column-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 10px 12px;
-  border-top: 3px solid #8c8c8c;
+  border-top: 3px solid var(--tk-ink-4);
   border-radius: 8px 8px 0 0;
   background: #f5f5f5;
+  flex: none;
 }
 
 .column-title {
@@ -316,7 +416,9 @@ onMounted(loadAll);
 }
 
 .column-count {
-  margin-inline-end: 0;
+  font-size: 12px;
+  color: var(--tk-ink-3);
+  font-weight: 600;
 }
 
 .column-add {
@@ -328,15 +430,15 @@ onMounted(loadAll);
   padding: 8px;
   overflow-y: auto;
   flex: 1;
-  min-height: 90px;
+  min-height: 0;
 }
 
 .column-empty {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--tk-ink-4);
   text-align: center;
-  padding: 12px 6px;
-  border: 1px dashed #d9d9d9;
+  padding: 14px 6px;
+  border: 1px dashed var(--tk-line-strong);
   border-radius: 6px;
 }
 

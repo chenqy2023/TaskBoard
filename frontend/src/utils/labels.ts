@@ -39,6 +39,14 @@ export const PRIORITY_COLORS: Record<Priority, string> = {
   P3: '#8c8c8c',
 };
 
+/** 优先级徽章底色，与 PRIORITY_COLORS 同色系但极浅，保证徽章上的深色文字可读 */
+export const PRIORITY_TINTS: Record<Priority, string> = {
+  P0: '#fff1f0',
+  P1: '#fff7e6',
+  P2: '#e6f4ff',
+  P3: '#fafafa',
+};
+
 export const PRIORITY_ORDER: Priority[] = ['P0', 'P1', 'P2', 'P3'];
 
 export const VERSION_STATUS_LABELS: Record<VersionStatus, string> = {

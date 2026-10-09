@@ -106,13 +106,57 @@ body {
   font-family: var(--tk-num);
 }
 
-/* 看板横向滚动容器 */
+/* 看板横向滚动容器：高度由页面按视口实测注入，列靠 stretch 撑满 */
 .board-scroll {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: stretch;
   overflow-x: auto;
-  padding-bottom: 12px;
+  overflow-y: hidden;
+  padding-bottom: 0;
+}
+
+/* ---------- 状态计数 chip：既是读数也是快捷筛选入口 ---------- */
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 12px;
+  color: var(--tk-ink-2);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.status-chip:hover {
+  border-color: var(--tk-brand);
+  color: var(--tk-brand);
+}
+
+.status-chip.active {
+  background: #e6f4ff;
+  border-color: #91caff;
+  color: var(--tk-brand);
+  font-weight: 600;
+}
+
+.status-chip .count {
+  font-weight: 600;
+  color: var(--tk-ink);
+}
+
+.status-chip.active .count {
+  color: var(--tk-brand);
+}
+
+/* 没有任务的状态弱化，但仍可点击（用于清空该类筛选） */
+.status-chip.dim {
+  opacity: 0.45;
 }
 
 /* ---------- 概览条：一排指标，靠竖细线分隔，不做成四张重卡片 ---------- */
