@@ -31,18 +31,16 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   <div class="card" :style="{ borderLeftColor: priorityColor(task.priority) }" @click="emit('open', task)">
     <div class="card-top">
       <span class="title" :class="{ done: task.status === 'DONE' }">{{ task.title }}</span>
-      <a-tooltip :title="PRIORITY_LABELS[task.priority]">
-        <span
-          class="priority"
-          :style="{
-            color: priorityColor(task.priority),
-            background: PRIORITY_TINTS[task.priority],
-            borderColor: priorityColor(task.priority),
-          }"
-        >
-          {{ task.priority }}
-        </span>
-      </a-tooltip>
+      <span
+        class="priority"
+        :style="{
+          color: priorityColor(task.priority),
+          background: PRIORITY_TINTS[task.priority],
+          borderColor: priorityColor(task.priority),
+        }"
+      >
+        {{ PRIORITY_LABELS[task.priority] }}
+      </span>
     </div>
 
     <!-- 负责人与计划结束日期构成稳定的一行：谁是主责、何时到期，一眼可见 -->
@@ -115,14 +113,16 @@ const participantText = computed(() => props.task.participants.map((item) => ite
   text-decoration: line-through;
 }
 
-/** 优先级用带底色的徽章，和继承自卡片的左色条互为呼应 */
+/** 优先级用带底色的徽章，和继承自卡片的左色条互为呼应。
+    文案是「紧急/高/中/低」，用 min-width 让单字与双字的徽章宽度一致。 */
 .priority {
   flex: none;
-  font-family: var(--tk-num);
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;
-  padding: 0 5px;
+  min-width: 34px;
+  padding: 0 6px;
+  text-align: center;
   border: 1px solid;
   border-radius: 4px;
 }

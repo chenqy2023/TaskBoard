@@ -15,11 +15,12 @@ export const TASK_STATUS_ORDER: TaskStatus[] = [
   TaskStatus.DONE,
 ];
 
+/** 优先级对外只用这四个描述，不再带 P0~P3 编号（枚举值内部仍是 P0~P3） */
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  [Priority.P0]: 'P0 紧急',
-  [Priority.P1]: 'P1 高',
-  [Priority.P2]: 'P2 中',
-  [Priority.P3]: 'P3 低',
+  [Priority.P0]: '紧急',
+  [Priority.P1]: '高',
+  [Priority.P2]: '中',
+  [Priority.P3]: '低',
 };
 
 export const VERSION_STATUS_LABELS: Record<VersionStatus, string> = {
@@ -83,12 +84,24 @@ export function buildLabelToEnum<T extends string>(labels: Record<T, string>): R
   }, {});
 }
 
+/**
+ * 解析优先级。兼容三种写法：
+ *   - 编号：P0 / P1 / P2 / P3
+ *   - 编号 + 描述：P0 紧急 / P1高（早期 Excel 导出就是这种，老文件仍要能导回来）
+ *   - 只有描述：紧急 / 高 / 中 / 低
+ */
 export function parsePriority(input: unknown): Priority | null {
-  const raw = String(input ?? '').trim().toUpperCase();
+  const raw = String(input ?? '').trim();
   if (!raw) return null;
-  const direct = Priority[raw as keyof typeof Priority];
-  if (direct) return direct;
-  return buildLabelToEnum(PRIORITY_LABELS)[String(input).trim()] ?? null;
+
+  const coded = raw.toUpperCase().match(/^P([0-3])(?![0-9])/);
+  if (coded) return `P${coded[1]}` as Priority;
+
+  const byLabel = buildLabelToEnum(PRIORITY_LABELS)[raw];
+  if (byLabel) return byLabel;
+
+  const upper = raw.toUpperCase();
+  return Priority[upper as keyof typeof Priority] ?? null;
 }
 
 export function parseTaskStatus(input: unknown): TaskStatus | null {

@@ -68,6 +68,23 @@ describe('Excel 导入行校验', () => {
     expect(parsed.actualEndDate).toBeNull();
   });
 
+  it('优先级支持新描述（紧急/高/中/低）', () => {
+    expect(parseImportRow(row({ title: 't', priority: '紧急' }), ctx).priority).toBe(Priority.P0);
+    expect(parseImportRow(row({ title: 't', priority: '低' }), ctx).priority).toBe(Priority.P3);
+  });
+
+  it('优先级仍兼容旧的编号写法（老 Excel 导出可原样导回）', () => {
+    expect(parseImportRow(row({ title: 't', priority: 'P1 高' }), ctx).priority).toBe(Priority.P1);
+    expect(parseImportRow(row({ title: 't', priority: 'p2' }), ctx).priority).toBe(Priority.P2);
+    expect(parseImportRow(row({ title: 't', priority: 'P0紧急' }), ctx).priority).toBe(Priority.P0);
+  });
+
+  it('形似编号但不合法的不当编号处理', () => {
+    // P10 不应被当成 P1
+    expect(parseImportRow(row({ title: 't', priority: 'P10' }), ctx).priority).toBe(Priority.P2);
+    expect(parseImportRow(row({ title: 't', priority: 'P10' }), ctx).warnings.join()).toContain('无法识别');
+  });
+
   it('负责人可用登录账号匹配', () => {
     expect(parseImportRow(row({ title: 't', assignee: 'lisi' }), ctx).assigneeId).toBe('u2');
   });

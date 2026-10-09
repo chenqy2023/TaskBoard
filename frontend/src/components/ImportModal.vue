@@ -98,7 +98,7 @@ function close() {
       <template #description>
         列名可用：标题（必填）、负责人、参与人、优先级、状态、进度、计划开始日期、计划结束日期、
         实际开始日期、实际结束日期、描述。负责人只能一个，参与人可多个（用「、」或逗号分隔）；<br />
-        优先级 <code>P0~P3</code> 或 <code>P0 紧急</code> 都能识别；状态支持 <code>TODO</code>/<code>未开始</code> 等中英文写法。
+        优先级填 <code>紧急</code>/<code>高</code>/<code>中</code>/<code>低</code>（也认 <code>P0~P3</code> 这类旧写法）；状态支持 <code>TODO</code>/<code>未开始</code> 等中英文写法。
         <a @click="downloadTemplate">下载当前任务清单作为模板</a>
       </template>
     </a-alert>

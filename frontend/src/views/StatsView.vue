@@ -10,6 +10,7 @@ import VersionTabs from '@/components/VersionTabs.vue';
 import ProgressSummary from '@/components/ProgressSummary.vue';
 import EChart from '@/components/EChart.vue';
 import type { EChartsOption } from 'echarts';
+import { PRIORITY_COLORS, TASK_STATUS_BAR_COLORS } from '@/utils/labels';
 
 const route = useRoute();
 const versionId = computed(() => String(route.params.id ?? ''));
@@ -17,20 +18,6 @@ const versionId = computed(() => String(route.params.id ?? ''));
 const version = ref<VersionView | null>(null);
 const stats = ref<VersionStats | null>(null);
 const loading = ref(false);
-
-const STATUS_COLOR_MAP: Record<string, string> = {
-  未开始: '#8c8c8c',
-  进行中: '#1677ff',
-  阻塞: '#ff4d4f',
-  已完成: '#52c41a',
-};
-
-const PRIORITY_COLOR_MAP: Record<string, string> = {
-  'P0 紧急': '#cf1322',
-  'P1 高': '#fa8c16',
-  'P2 中': '#1677ff',
-  'P3 低': '#8c8c8c',
-};
 
 const statusOption = computed<EChartsOption>(() => ({
   tooltip: { trigger: 'item', formatter: '{b}: {c} 个（{d}%）' },
@@ -47,7 +34,7 @@ const statusOption = computed<EChartsOption>(() => ({
         .map((item) => ({
           name: item.label,
           value: item.count,
-          itemStyle: { color: STATUS_COLOR_MAP[item.label] },
+          itemStyle: { color: TASK_STATUS_BAR_COLORS[item.status] },
         })),
     },
   ],
@@ -67,7 +54,7 @@ const priorityOption = computed<EChartsOption>(() => ({
       barWidth: 18,
       label: { show: true, position: 'right' },
       data: (stats.value?.byPriority ?? [])
-        .map((item) => ({ value: item.count, itemStyle: { color: PRIORITY_COLOR_MAP[item.label] } }))
+        .map((item) => ({ value: item.count, itemStyle: { color: PRIORITY_COLORS[item.priority] } }))
         .reverse(),
     },
   ],

@@ -7,7 +7,13 @@ import dayjs from 'dayjs';
 import type { Priority, TaskStatus, TaskView, User } from '@/types';
 import { tasksApi, usersApi } from '@/api';
 import { errorText } from '@/api/http';
-import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, priorityColor, progressColor } from '@/utils/labels';
+import {
+  PRIORITY_LABELS,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+  priorityColor,
+  progressColor,
+} from '@/utils/labels';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
 
@@ -120,7 +126,7 @@ onMounted(load);
                   {{ TASK_STATUS_LABELS[item.status as TaskStatus] }}
                 </a-tag>
                 <span :style="{ color: priorityColor(item.priority as Priority), fontWeight: 600 }">
-                  {{ item.priority }}
+                  {{ PRIORITY_LABELS[item.priority as Priority] }}
                 </span>
                 <div class="mini-progress">
                   <a-progress

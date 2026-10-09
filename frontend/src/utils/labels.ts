@@ -25,11 +25,12 @@ export const TASK_STATUS_BAR_COLORS: Record<TaskStatus, string> = {
   DONE: '#52c41a',
 };
 
+/** 优先级对外只用这四个描述，不再带 P0~P3 编号（枚举值内部仍是 P0~P3） */
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  P0: 'P0 紧急',
-  P1: 'P1 高',
-  P2: 'P2 中',
-  P3: 'P3 低',
+  P0: '紧急',
+  P1: '高',
+  P2: '中',
+  P3: '低',
 };
 
 export const PRIORITY_COLORS: Record<Priority, string> = {

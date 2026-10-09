@@ -129,7 +129,7 @@ export class TaskIoService {
       ['标题', '是', '任务名称，最长 200 字'],
       ['负责人', '否', '填登录账号或姓名，如 admin / 张三；只能填一个人；不存在时会提示警告并留空'],
       ['参与人', '否', '可填多人，用「、」「,」或空格分隔；不存在的名字会被忽略并给出警告'],
-      ['优先级', '否', `${Object.values(PRIORITY_LABELS).join(' / ')}，也可只写 P0~P3；默认 P2 中`],
+      ['优先级', '否', `${Object.values(PRIORITY_LABELS).join(' / ')}（也认 P0~P3 及「P0 紧急」这类旧写法）；默认「中」`],
       ['状态', '否', `${Object.values(TASK_STATUS_LABELS).join(' / ')}，也可只写 TODO/IN_PROGRESS/BLOCKED/DONE；默认未开始`],
       ['进度', '否', '0-100 的整数；状态为已完成时会强制为 100'],
       [DATE_FIELD_LABELS.plannedStartDate, '否', 'YYYY-MM-DD，也支持 2026/10/20、2026年10月20日'],
