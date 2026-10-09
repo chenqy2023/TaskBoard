@@ -5,11 +5,9 @@ import type { VersionSummary } from '@/types';
 const props = withDefaults(
   defineProps<{
     summary: VersionSummary | null;
-    /** 紧凑模式：用于版本列表行内 */
-    compact?: boolean;
     showStatusBreakdown?: boolean;
   }>(),
-  { compact: false, showStatusBreakdown: false },
+  { showStatusBreakdown: false },
 );
 
 const avg = computed(() => props.summary?.avgProgress ?? 0);
@@ -37,12 +35,12 @@ const breakdown = computed(() => {
 </script>
 
 <template>
-  <div class="summary" :class="{ compact }">
+  <div class="summary">
     <div class="summary-bar">
       <a-progress
         :percent="avg"
         :stroke-color="strokeColor"
-        :size="compact ? 'small' : 'default'"
+        size="default"
         :format="(p: number) => `${p}%`"
       />
     </div>
