@@ -46,7 +46,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-系统管理员}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-admin}
       ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?请在 .env 中设置 ADMIN_INITIAL_PASSWORD}
       TZ: Asia/Shanghai
     depends_on:

@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const username = (process.env.ADMIN_USERNAME || 'admin').trim();
-  const displayName = (process.env.ADMIN_DISPLAY_NAME || '系统管理员').trim();
+  const displayName = (process.env.ADMIN_DISPLAY_NAME || 'admin').trim();
   const password = process.env.ADMIN_INITIAL_PASSWORD;
 
   if (!password) {
