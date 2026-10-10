@@ -38,7 +38,6 @@ async function submit() {
       <div class="login-head">
         <div class="logo">TK</div>
         <h1>任务看板</h1>
-        <p class="text-muted">项目测试进度与任务管理</p>
       </div>
 
       <a-form layout="vertical" @submit.prevent="submit">
@@ -56,10 +55,6 @@ async function submit() {
           登 录
         </a-button>
       </a-form>
-
-      <p class="login-tip text-muted">
-        首次部署的初始账号由 <code>ADMIN_INITIAL_PASSWORD</code> 决定，登录后请及时修改密码。
-      </p>
     </div>
   </div>
 </template>
@@ -102,11 +97,5 @@ async function submit() {
   color: #fff;
   font-size: 20px;
   font-weight: 700;
-}
-
-.login-tip {
-  font-size: 12px;
-  margin: 16px 0 0;
-  line-height: 1.6;
 }
 </style>
