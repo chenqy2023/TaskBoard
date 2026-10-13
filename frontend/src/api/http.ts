@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import { message } from 'ant-design-vue';
+import { tGlobal } from '@/i18n';
 
-export const TOKEN_KEY = 'task-kanban-token';
+export const TOKEN_KEY = 'taskboard-token';
 
 export const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',
@@ -20,30 +21,30 @@ http.interceptors.response.use(
   (error: AxiosError<{ message?: string | string[] }>) => {
     const status = error.response?.status;
     const raw = error.response?.data?.message;
-    const text = Array.isArray(raw) ? raw.join('；') : raw;
+    const text = Array.isArray(raw) ? raw.join('; ') : raw;
 
     if (status === 401) {
       localStorage.removeItem(TOKEN_KEY);
       if (!window.location.hash.includes('/login')) {
-        message.error(text || '登录状态已失效，请重新登录');
+        message.error(text || tGlobal('http.sessionExpired'));
         window.location.hash = '#/login';
       }
     } else if (status === 403) {
-      message.error(text || '当前账号无权执行该操作');
+      message.error(text || tGlobal('http.forbidden'));
     } else if (status && status >= 400) {
-      message.error(text || `请求失败（${status}）`);
+      message.error(text || tGlobal('http.requestFailed', { status }));
     } else if (error.code === 'ECONNABORTED') {
-      message.error('请求超时，请检查网络或后端服务');
+      message.error(tGlobal('http.timeout'));
     } else {
-      message.error('无法连接后端服务，请确认后端已启动');
+      message.error(tGlobal('http.offline'));
     }
     return Promise.reject(error);
   },
 );
 
-export function errorText(error: unknown, fallback = '操作失败'): string {
+export function errorText(error: unknown, fallback?: string): string {
   const err = error as AxiosError<{ message?: string | string[] }>;
   const raw = err?.response?.data?.message;
-  if (Array.isArray(raw)) return raw.join('；');
-  return raw || fallback;
+  if (Array.isArray(raw)) return raw.join('; ');
+  return raw || fallback || tGlobal('common.operationFailed');
 }

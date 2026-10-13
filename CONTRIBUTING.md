@@ -4,7 +4,7 @@
 
 ## 开发环境
 
-见 [README 的「快速开始」](README.md#快速开始)。简言之：`docker compose` 起数据库，前后端各自 `npm run dev`。
+见 [README_ZH.md 的「快速开始」](README_ZH.md#快速开始)（或英文 [README.md](README.md#quick-start)）。简言之：`docker compose` 起数据库，前后端各自 `npm run dev`。
 
 ## 提交前请跑一遍
 
@@ -29,8 +29,7 @@ cd frontend && node scripts/ws-smoke.mjs http://localhost:3000
 
 - **前后端都是 TypeScript**，不要用 `any` 绕开类型；确实需要时写明原因。
 - 业务规则尽量抽成**纯函数**并配单测（参考 `src/projects/project-summary.ts`、
-  `src/tasks/task.rules.ts`、`src/task-io/import.rules.ts`），这样规则本身能被验证，
-  不依赖数据库。
+  `src/tasks/task.rules.ts`），这样规则本身能被验证，不依赖数据库。
 - 前端样式统一用 `src/styles/main.css` 里的设计令牌（`--tk-*`），不要在组件里写死颜色、
   圆角、阴影；需要新令牌就往 `:root` 里加一个并写清用途。
 - 用户可见的文案统一用中文，与现有措辞保持一致（例如状态用「未开始/进行中/阻塞/已完成」）。

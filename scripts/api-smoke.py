@@ -16,7 +16,6 @@ import json
 import sys
 import urllib.error
 import urllib.request
-import uuid
 
 ADMIN_USER = "admin"
 ADMIN_PASSWORD = "Admin@123456"
@@ -59,35 +58,6 @@ def call(base, method, path, token=None, body=None, raw=False, expect=None):
         return status, json.loads(payload.decode("utf-8"))
     except json.JSONDecodeError:
         return status, payload.decode("utf-8", "replace")
-
-
-def upload(base, path, token, filename, content, field="file"):
-    """手工拼 multipart/form-data，避免引入 requests 依赖。"""
-    boundary = f"----smoke{uuid.uuid4().hex}"
-    body = b"".join(
-        [
-            f"--{boundary}\r\n".encode(),
-            f'Content-Disposition: form-data; name="{field}"; filename="{filename}"\r\n'.encode(),
-            b"Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n",
-            content,
-            f"\r\n--{boundary}--\r\n".encode(),
-        ]
-    )
-    headers = {
-        "Content-Type": f"multipart/form-data; boundary={boundary}",
-        "Content-Length": str(len(body)),
-        "Authorization": f"Bearer {token}",
-    }
-    request = urllib.request.Request(f"{base}{path}", data=body, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(request) as response:
-            return response.status, json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as error:
-        payload = error.read()
-        try:
-            return error.code, json.loads(payload.decode("utf-8"))
-        except json.JSONDecodeError:
-            return error.code, {"message": payload.decode("utf-8", "replace")}
 
 
 def check(name, condition, detail=""):
@@ -306,32 +276,8 @@ def main():
     check("含未分配分组", any(a["label"] == "未分配" for a in stats["byAssignee"]))
     check("统计已不含模块维度", "byModule" not in stats, f"实际字段 {list(stats)}")
 
-    # ---------- 9. 导出 / 导入往返 ----------
-    print("\n9) Excel 导出与导入往返")
-    status, blob = call(base, "GET", f"/projects/{vid}/export", token=token, raw=True)
-    check("导出返回 xlsx", status == 200 and blob[:2] == b"PK", f"实际 {status}, 前两字节 {blob[:2]!r}")
-
-    status, preview = upload(base, f"/projects/{vid}/import/preview", token, "roundtrip.xlsx", blob)
-    check("导出的文件可直接回传预览 (201)", status == 201, f"实际 {status}: {str(preview)[:200]}")
-    if status == 201:
-        check("预览无错误行", preview["errorCount"] == 0, f"实际 {preview['errorCount']}")
-        check("预览识别出 3 行", preview["validCount"] == 3, f"实际 {preview['validCount']}")
-
-        participants_ok = any(row["parsed"]["participantNames"] for row in preview["rows"])
-        check("导出的参与人可被回传识别", participants_ok)
-
-        raw_rows = [row["raw"] for row in preview["rows"] if not row["parsed"]["errors"]]
-        status, confirmed = call(
-            base, "POST", f"/projects/{vid}/import/confirm", token=token,
-            body={"rows": raw_rows}, expect=201,
-        )
-        check("确认导入写入 3 条", confirmed.get("createdCount") == 3, f"实际 {confirmed}")
-
-        _, summary3 = call(base, "GET", f"/projects/{vid}/summary", token=token)
-        check("导入后任务总数为 6", summary3["total"] == 6, f"实际 {summary3['total']}")
-
-    # ---------- 10. 清理 ----------
-    print("\n10) 清理")
+    # ---------- 9. 清理 ----------
+    print("\n9) 清理")
     if args.keep:
         print(f"  [跳过] 保留测试数据：项目 id = {vid}")
     else:

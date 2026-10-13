@@ -1,31 +1,34 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { LockOutlined, UserOutlined } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { errorText } from '@/api/http';
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
 
 const form = reactive({ username: '', password: '' });
 const submitting = ref(false);
 
 async function submit() {
   if (!form.username.trim() || !form.password) {
-    message.warning('请输入账号和密码');
+    message.warning(t('auth.needCredentials'));
     return;
   }
   submitting.value = true;
   try {
     await auth.login(form.username.trim(), form.password);
-    message.success('登录成功');
+    message.success(t('auth.loginSuccess'));
     const redirect = route.query.redirect as string | undefined;
     await router.replace(redirect && redirect !== '/login' ? redirect : '/projects');
   } catch (error) {
-    message.error(errorText(error, '账号或密码错误'));
+    message.error(errorText(error, t('auth.loginFailed')));
   } finally {
     submitting.value = false;
   }
@@ -34,20 +37,23 @@ async function submit() {
 
 <template>
   <div class="login-page">
+    <div class="login-locale">
+      <LocaleSwitcher tone="dark" />
+    </div>
+
     <div class="login-card">
-      <!-- 顶部渐变封面：与首页项目卡片用同一套视觉语言，登录页就是产品的门面 -->
       <div class="login-cover">
-        <span class="login-mark">TK</span>
-        <span class="login-title">任务看板</span>
+        <span class="login-mark">{{ t('app.mark') }}</span>
+        <span class="login-title">{{ t('app.name') }}</span>
       </div>
 
       <div class="login-body">
         <a-form layout="vertical" @submit.prevent="submit">
-          <a-form-item label="账号">
+          <a-form-item :label="t('auth.username')">
             <a-input
               v-model:value="form.username"
               size="large"
-              placeholder="登录账号"
+              :placeholder="t('auth.usernamePlaceholder')"
               autocomplete="username"
               allow-clear
             >
@@ -55,11 +61,11 @@ async function submit() {
             </a-input>
           </a-form-item>
 
-          <a-form-item label="密码">
+          <a-form-item :label="t('auth.password')">
             <a-input-password
               v-model:value="form.password"
               size="large"
-              placeholder="密码"
+              :placeholder="t('auth.passwordPlaceholder')"
               autocomplete="current-password"
               @press-enter="submit"
             >
@@ -75,7 +81,7 @@ async function submit() {
             :loading="submitting"
             @click="submit"
           >
-            登 录
+            {{ t('auth.login') }}
           </a-button>
         </a-form>
       </div>
@@ -84,10 +90,8 @@ async function submit() {
 </template>
 
 <style scoped>
-/* 页面：浅色底 + 两团柔光 + 极淡点阵。
-   点阵是刻意加的——它呼应封面带的纹理，也让大面积留白看起来是有意为之，
-   而不是「内容没加载完」。 */
 .login-page {
+  position: relative;
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -99,6 +103,12 @@ async function submit() {
     radial-gradient(rgba(9, 30, 66, 0.055) 1px, transparent 1px);
   background-repeat: no-repeat, no-repeat, repeat;
   background-size: auto, auto, 18px 18px;
+}
+
+.login-locale {
+  position: absolute;
+  top: 16px;
+  right: 20px;
 }
 
 .login-card {
@@ -128,7 +138,6 @@ async function submit() {
   }
 }
 
-/* ---------- 封面带 ---------- */
 .login-cover {
   position: relative;
   height: 108px;
@@ -141,7 +150,6 @@ async function submit() {
   overflow: hidden;
 }
 
-/* 点阵纹理：工程工具的气质，也避免一整块纯渐变显得平 */
 .login-cover::after {
   content: '';
   position: absolute;
@@ -177,7 +185,6 @@ async function submit() {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.24);
 }
 
-/* ---------- 表单 ---------- */
 .login-body {
   padding: 26px 28px;
 }
@@ -199,7 +206,6 @@ async function submit() {
   border-radius: var(--tk-radius-sm);
 }
 
-/* 主按钮拉高一点并加大字重：登录页只有一个动作，它是视觉落点 */
 .login-submit {
   margin-top: 4px;
   height: 42px;

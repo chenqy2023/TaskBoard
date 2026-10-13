@@ -42,7 +42,7 @@ export const ACTIVITY_ACTION_LABELS: Record<ActivityAction, string> = {
   [ActivityAction.COMMENT_ADDED]: '发表了评论',
 };
 
-/** 四个计划/实际日期的字段名与中文名，日志与 Excel 都按这个顺序 */
+/** 四个计划/实际日期的字段名与中文名（日志顺序） */
 export const DATE_FIELDS = [
   'plannedStartDate',
   'plannedEndDate',
@@ -61,53 +61,3 @@ export const DATE_FIELD_LABELS: Record<DateField, string> = {
 
 /** 进度变动小于该阈值不记日志，避免拖动进度时刷屏 */
 export const PROGRESS_LOG_THRESHOLD = 5;
-
-/** Excel 导入导出的列名（顺序即列顺序） */
-export const TASK_EXCEL_COLUMNS = [
-  '标题',
-  '负责人',
-  '参与人',
-  '优先级',
-  '状态',
-  '进度',
-  '计划开始日期',
-  '计划结束日期',
-  '实际开始日期',
-  '实际结束日期',
-  '描述',
-] as const;
-
-export function buildLabelToEnum<T extends string>(labels: Record<T, string>): Record<string, T> {
-  return Object.entries(labels).reduce<Record<string, T>>((acc, [value, label]) => {
-    acc[label as string] = value as T;
-    return acc;
-  }, {});
-}
-
-/**
- * 解析优先级。兼容三种写法：
- *   - 编号：P0 / P1 / P2 / P3
- *   - 编号 + 描述：P0 紧急 / P1高（早期 Excel 导出就是这种，老文件仍要能导回来）
- *   - 只有描述：紧急 / 高 / 中 / 低
- */
-export function parsePriority(input: unknown): Priority | null {
-  const raw = String(input ?? '').trim();
-  if (!raw) return null;
-
-  const coded = raw.toUpperCase().match(/^P([0-3])(?![0-9])/);
-  if (coded) return `P${coded[1]}` as Priority;
-
-  const byLabel = buildLabelToEnum(PRIORITY_LABELS)[raw];
-  if (byLabel) return byLabel;
-
-  const upper = raw.toUpperCase();
-  return Priority[upper as keyof typeof Priority] ?? null;
-}
-
-export function parseTaskStatus(input: unknown): TaskStatus | null {
-  const raw = String(input ?? '').trim().toUpperCase();
-  if (raw && TaskStatus[raw as keyof typeof TaskStatus]) {
-    return TaskStatus[raw as keyof typeof TaskStatus];
-  }
-  return buildLabelToEnum(TASK_STATUS_LABELS)[String(input).trim()] ?? null;
-}

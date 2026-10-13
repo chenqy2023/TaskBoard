@@ -10,13 +10,16 @@ import { TasksModule } from './tasks/tasks.module';
 import { CommentsModule } from './comments/comments.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { StatsModule } from './stats/stats.module';
-import { TaskIoModule } from './task-io/task-io.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // 优先 backend/.env，其次仓库根 .env（与 docker --env-file 同源）
+      envFilePath: ['.env', '../.env'],
+    }),
     PrismaModule,
     RealtimeModule,
     AuthModule,
@@ -26,7 +29,6 @@ import { RolesGuard } from './common/guards/roles.guard';
     CommentsModule,
     ActivitiesModule,
     StatsModule,
-    TaskIoModule,
   ],
   providers: [
     // 全局默认要求登录，公开接口用 @Public() 显式放开

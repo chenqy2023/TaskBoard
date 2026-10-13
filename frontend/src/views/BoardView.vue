@@ -1,28 +1,29 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
-import { DownloadOutlined, PlusOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import draggable from 'vuedraggable';
 import type { TaskFilters, TaskStatus, TaskView, User, ProjectSummary, ProjectView } from '@/types';
-import { taskIoApi, tasksApi, usersApi, projectsApi } from '@/api';
+import { tasksApi, usersApi, projectsApi } from '@/api';
 import { errorText } from '@/api/http';
 import { useRealtime, notifyRemoteChange } from '@/composables/useRealtime';
 import {
   TASK_STATUS_BAR_COLORS,
-  TASK_STATUS_LABELS,
   TASK_STATUS_ORDER,
   TASK_STATUS_TINTS,
 } from '@/utils/labels';
+import { localizeDemoText } from '@/utils/demo-content';
 import ProgressSummary from '@/components/ProgressSummary.vue';
 import ProjectTabs from '@/components/ProjectTabs.vue';
 import FilterBar from '@/components/FilterBar.vue';
 import TaskCard from '@/components/TaskCard.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
 import TaskDetailModal from '@/components/TaskDetailModal.vue';
-import ImportModal from '@/components/ImportModal.vue';
 
 const route = useRoute();
+const { t, locale } = useI18n();
 const projectId = computed(() => String(route.params.id ?? ''));
 
 const project = ref<ProjectView | null>(null);
@@ -42,21 +43,19 @@ const editingTask = ref<TaskView | null>(null);
 const defaultStatus = ref<TaskStatus>('TODO');
 const detailOpen = ref(false);
 const detailTask = ref<TaskView | null>(null);
-const importOpen = ref(false);
 
 const dragSource = ref<{ task: TaskView; index: number } | null>(null);
 
-const totalShown = computed(() => TASK_STATUS_ORDER.reduce((sum, s) => sum + columns[s].length, 0));
-
 /** 汇总条上的状态计数：既是读数也是快捷筛选入口，省得再去上面的下拉里选一次 */
-const statusChips = computed(() =>
-  TASK_STATUS_ORDER.map((status) => ({
+const statusChips = computed(() => {
+  void locale.value;
+  return TASK_STATUS_ORDER.map((status) => ({
     status,
-    label: TASK_STATUS_LABELS[status],
+    label: t(`labels.taskStatus.${status}`),
     color: TASK_STATUS_BAR_COLORS[status],
     count: summary.value?.byStatus?.[status] ?? 0,
-  })),
-);
+  }));
+});
 
 function toggleStatus(status?: TaskStatus) {
   filters.value = { ...filters.value, status };
@@ -89,7 +88,7 @@ async function loadAll() {
       detailTask.value = boardTasks.find((t) => t.id === detailTask.value!.id) ?? detailTask.value;
     }
   } catch (error) {
-    message.error(errorText(error, '加载看板失败'));
+    message.error(errorText(error, t('board.loadFailed')));
   } finally {
     loading.value = false;
   }
@@ -106,7 +105,7 @@ async function loadTasksAndSummary() {
   for (const task of boardTasks) columns[task.status].push(task);
 }
 
-const { connected } = useRealtime(() => projectId.value, async (event) => {
+useRealtime(() => projectId.value, async (event) => {
   notifyRemoteChange(event);
   try {
     await loadTasksAndSummary();
@@ -118,7 +117,7 @@ const { connected } = useRealtime(() => projectId.value, async (event) => {
 watch(
   filters,
   () => {
-    void loadTasksAndSummary().catch((error) => message.error(errorText(error, '筛选失败')));
+    void loadTasksAndSummary().catch((error) => message.error(errorText(error, t('board.filterFailed'))));
   },
   { deep: true },
 );
@@ -149,10 +148,10 @@ async function onDragEnd(event: { to: HTMLElement; newIndex?: number }) {
     await tasksApi.move(source.task.id, targetStatus, targetIndex);
     await loadTasksAndSummary();
     if (targetStatus === 'DONE' && source.task.status !== 'DONE') {
-      message.success(`「${source.task.title}」已完成，进度自动置为 100%`);
+      message.success(t('board.taskDone', { title: localizeDemoText(source.task.title) }));
     }
   } catch (error) {
-    message.error(errorText(error, '移动失败'));
+    message.error(errorText(error, t('board.moveFailed')));
     // 移动失败时以服务端数据为准，把界面回滚
     await loadTasksAndSummary().catch(() => undefined);
   }
@@ -174,15 +173,6 @@ function openDetail(task: TaskView) {
   detailOpen.value = true;
 }
 
-async function exportExcel() {
-  try {
-    await taskIoApi.download(projectId.value, `${project.value?.name ?? '任务'}-任务清单.xlsx`);
-    message.success('已开始下载');
-  } catch (error) {
-    message.error(errorText(error, '导出失败'));
-  }
-}
-
 onMounted(loadAll);
 </script>
 
@@ -198,13 +188,13 @@ onMounted(loadAll);
 
           <div class="status-chips">
             <span class="status-chip" :class="{ active: !filters.status }" @click="toggleStatus(undefined)">
-              全部
+              {{ t('board.filterAll') }}
               <b class="count num">{{ summary?.total ?? 0 }}</b>
             </span>
             <a-tooltip
               v-for="chip in statusChips"
               :key="chip.status"
-              :title="`只看「${chip.label}」的任务`"
+              :title="t('board.filterOnly', { label: chip.label })"
             >
               <span
                 class="status-chip"
@@ -225,28 +215,13 @@ onMounted(loadAll);
         <div class="toolbar board-toolbar">
           <FilterBar v-model:filters="filters" :users="users" hide-status />
           <div class="toolbar-right">
-            <a-tooltip :title="connected ? '他人改动会实时推送到这里' : '实时通道未连接，改动需手动刷新'">
-              <span class="sync-state" :class="{ on: connected }">
-                <i class="dot" />
-                {{ connected ? '实时同步中' : '实时未连接' }}
-              </span>
-            </a-tooltip>
-            <span class="text-muted count-hint">当前 {{ totalShown }} 个任务</span>
             <a-button size="small" :loading="loading" @click="loadAll">
               <ReloadOutlined />
-              刷新
-            </a-button>
-            <a-button size="small" @click="exportExcel">
-              <DownloadOutlined />
-              导出
-            </a-button>
-            <a-button size="small" @click="importOpen = true">
-              <UploadOutlined />
-              导入
+              {{ t('common.refresh') }}
             </a-button>
             <a-button type="primary" size="small" @click="openCreate('TODO')">
               <PlusOutlined />
-              新建任务
+              {{ t('board.newTask') }}
             </a-button>
           </div>
         </div>
@@ -259,11 +234,10 @@ onMounted(loadAll);
             v-for="status in TASK_STATUS_ORDER"
             :key="status"
             class="column"
-            :style="{ borderTopColor: TASK_STATUS_BAR_COLORS[status] }"
           >
             <div class="column-head">
               <i class="dot" :style="{ background: TASK_STATUS_BAR_COLORS[status] }" />
-              <span class="column-title">{{ TASK_STATUS_LABELS[status] }}</span>
+              <span class="column-title">{{ t(`labels.taskStatus.${status}`) }}</span>
               <span
                 class="column-count num"
                 :style="{ background: TASK_STATUS_TINTS[status], color: TASK_STATUS_BAR_COLORS[status] }"
@@ -290,15 +264,14 @@ onMounted(loadAll);
               </template>
               <template #footer>
                 <div v-if="columns[status].length === 0" class="column-empty">
-                  把卡片拖到这里
+                  {{ t('board.dropHere') }}
                 </div>
               </template>
             </draggable>
 
-            <!-- 底部「新建任务」行：比列头的小加号更显眼 -->
             <button class="column-add-row" type="button" @click="openCreate(status)">
               <PlusOutlined />
-              新建任务
+              {{ t('board.newTask') }}
             </button>
             </div>
           </div>
@@ -320,13 +293,6 @@ onMounted(loadAll);
       :task="detailTask"
       @edit="openEdit"
       @changed="loadTasksAndSummary"
-    />
-
-    <ImportModal
-      v-model:open="importOpen"
-      :project-id="projectId"
-      :project-name="project?.name ?? '项目'"
-      @imported="loadAll"
     />
   </div>
 </template>
@@ -393,34 +359,6 @@ onMounted(loadAll);
   gap: 10px;
 }
 
-.sync-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--tk-ink-3);
-  white-space: nowrap;
-  cursor: help;
-}
-
-.sync-state .dot {
-  background: var(--tk-ink-4);
-}
-
-.sync-state.on {
-  color: var(--tk-success);
-}
-
-.sync-state.on .dot {
-  background: var(--tk-success);
-  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.14);
-}
-
-.count-hint {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 /* 看板带：占满剩余高度，横向滚动 */
 .board-strip {
   flex: 1 1 auto;
@@ -477,7 +415,6 @@ onMounted(loadAll);
   min-height: 0;
   background: #fff;
   border: 1px solid var(--tk-hairline);
-  border-top: 3px solid var(--tk-ink-4);
   border-radius: var(--tk-radius-md);
   box-shadow: var(--tk-shadow-column);
   overflow: hidden;

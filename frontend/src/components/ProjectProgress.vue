@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { TaskStatus, ProjectSummary } from '@/types';
 
 const props = defineProps<{ summary: ProjectSummary | null }>();
+const { t, locale } = useI18n();
 
-const SEGMENTS: { status: TaskStatus; label: string; color: string }[] = [
-  { status: 'TODO', label: '未开始', color: 'var(--tk-status-todo)' },
-  { status: 'IN_PROGRESS', label: '进行中', color: 'var(--tk-status-doing)' },
-  { status: 'BLOCKED', label: '阻塞', color: 'var(--tk-status-blocked)' },
-  { status: 'DONE', label: '已完成', color: 'var(--tk-status-done)' },
+const SEGMENTS: { status: TaskStatus; color: string }[] = [
+  { status: 'TODO', color: 'var(--tk-status-todo)' },
+  { status: 'IN_PROGRESS', color: 'var(--tk-status-doing)' },
+  { status: 'BLOCKED', color: 'var(--tk-status-blocked)' },
+  { status: 'DONE', color: 'var(--tk-status-done)' },
 ];
 
 const total = computed(() => props.summary?.total ?? 0);
@@ -18,12 +20,18 @@ const avg = computed(() => Math.min(100, Math.max(0, props.summary?.avgProgress 
 const rate = computed(() => props.summary?.completionRate ?? 0);
 
 /** 分段条按任务条数占比，和上面的「平均进度」是两个不同口径，图例里写清楚 */
-const segments = computed(() =>
-  SEGMENTS.map((segment) => {
+const segments = computed(() => {
+  void locale.value;
+  return SEGMENTS.map((segment) => {
     const count = props.summary?.byStatus?.[segment.status] ?? 0;
-    return { ...segment, count, percent: total.value === 0 ? 0 : (count / total.value) * 100 };
-  }),
-);
+    return {
+      ...segment,
+      label: t(`labels.taskStatus.${segment.status}`),
+      count,
+      percent: total.value === 0 ? 0 : (count / total.value) * 100,
+    };
+  });
+});
 
 const visibleLegend = computed(() => segments.value.filter((segment) => segment.count > 0));
 
@@ -41,10 +49,10 @@ const avgTone = computed(() => {
       <div class="vp-metric">
         <span class="vp-value num" :class="`tone-${avgTone}`">{{ avg }}</span>
         <span class="vp-unit">%</span>
-        <span class="vp-label">平均进度</span>
+        <span class="vp-label">{{ t('progress.average') }}</span>
       </div>
       <div class="vp-rate">
-        完成率
+        {{ t('progress.completion') }}
         <b class="num">{{ rate }}%</b>
         <em class="num">{{ done }}/{{ total }}</em>
       </div>
@@ -58,13 +66,13 @@ const avgTone = computed(() => {
             :key="segment.status"
             class="vp-seg"
             :style="{ width: `${segment.percent}%`, background: segment.color }"
-            :title="`${segment.label} ${segment.count} 个`"
+            :title="t('stats.segmentTitle', { label: segment.label, n: segment.count })"
           />
         </template>
       </div>
 
       <div class="vp-legend">
-        <span v-if="total === 0" class="text-muted">还没有任务</span>
+        <span v-if="total === 0" class="text-muted">{{ t('stats.noTasks') }}</span>
         <template v-else>
           <span
             v-for="segment in visibleLegend"

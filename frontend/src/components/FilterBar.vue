@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue';
 import type { Priority, TaskFilters, TaskStatus, User } from '@/types';
-import { PRIORITY_LABELS, PRIORITY_ORDER, TASK_STATUS_LABELS, TASK_STATUS_ORDER } from '@/utils/labels';
+import { PRIORITY_ORDER, TASK_STATUS_ORDER } from '@/utils/labels';
 
 const props = withDefaults(
   defineProps<{
@@ -14,6 +15,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{ (e: 'update:filters', value: TaskFilters): void }>();
+const { t, locale } = useI18n();
 
 function patch(partial: Partial<TaskFilters>) {
   emit('update:filters', { ...props.filters, ...partial });
@@ -23,14 +25,33 @@ function reset() {
   emit('update:filters', { keyword: '' });
 }
 
-const assigneeOptions = computed(() => [
-  { value: 'unassigned', label: '未分配' },
-  ...props.users.map((user) => ({ value: user.id, label: user.displayName })),
-]);
+const assigneeOptions = computed(() => {
+  void locale.value;
+  return [
+    { value: 'unassigned', label: t('common.unassigned') },
+    ...props.users.map((user) => ({ value: user.id, label: user.displayName })),
+  ];
+});
 
 const participantOptions = computed(() =>
   props.users.map((user) => ({ value: user.id, label: user.displayName })),
 );
+
+const priorityOptions = computed(() => {
+  void locale.value;
+  return PRIORITY_ORDER.map((value) => ({
+    value,
+    label: t(`labels.priority.${value}`),
+  }));
+});
+
+const statusOptions = computed(() => {
+  void locale.value;
+  return TASK_STATUS_ORDER.map((value) => ({
+    value,
+    label: t(`labels.taskStatus.${value}`),
+  }));
+});
 
 const hasFilter = computed(
   () =>
@@ -51,7 +72,7 @@ function filterByLabel(input: string, option: { label?: string }) {
     <a-input
       :value="filters.keyword"
       class="filter-keyword"
-      placeholder="搜索标题或描述"
+      :placeholder="t('filter.keywordPlaceholder')"
       allow-clear
       @update:value="(value: string) => patch({ keyword: value })"
     >
@@ -61,7 +82,7 @@ function filterByLabel(input: string, option: { label?: string }) {
     <a-select
       :value="filters.assigneeId"
       class="filter-item"
-      placeholder="负责人"
+      :placeholder="t('filter.assignee')"
       allow-clear
       show-search
       :options="assigneeOptions"
@@ -72,7 +93,7 @@ function filterByLabel(input: string, option: { label?: string }) {
     <a-select
       :value="filters.participantId"
       class="filter-item"
-      placeholder="参与人"
+      :placeholder="t('filter.participant')"
       allow-clear
       show-search
       :options="participantOptions"
@@ -83,9 +104,9 @@ function filterByLabel(input: string, option: { label?: string }) {
     <a-select
       :value="filters.priority"
       class="filter-item-sm"
-      placeholder="优先级"
+      :placeholder="t('filter.priority')"
       allow-clear
-      :options="PRIORITY_ORDER.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))"
+      :options="priorityOptions"
       @update:value="(value: Priority | undefined) => patch({ priority: value })"
     />
 
@@ -93,15 +114,15 @@ function filterByLabel(input: string, option: { label?: string }) {
       v-if="!hideStatus"
       :value="filters.status"
       class="filter-item-sm"
-      placeholder="状态"
+      :placeholder="t('filter.status')"
       allow-clear
-      :options="TASK_STATUS_ORDER.map((s) => ({ value: s, label: TASK_STATUS_LABELS[s] }))"
+      :options="statusOptions"
       @update:value="(value: TaskStatus | undefined) => patch({ status: value })"
     />
 
     <a-button v-if="hasFilter" size="small" @click="reset">
       <ReloadOutlined />
-      重置
+      {{ t('filter.clear') }}
     </a-button>
 
     <slot name="extra" />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { message, Modal } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import type { Role, User } from '@/types';
@@ -9,8 +10,8 @@ import { useAuthStore } from '@/stores/auth';
 
 const auth = useAuthStore();
 const users = ref<User[]>([]);
+const { t, locale } = useI18n();
 const loading = ref(false);
-const includeInactive = ref(false);
 
 const formOpen = ref(false);
 const editing = ref<User | null>(null);
@@ -27,23 +28,23 @@ const resetOpen = ref(false);
 const resetTarget = ref<User | null>(null);
 const resetPassword = ref('');
 
-const columns = [
-  { title: '姓名', key: 'displayName', width: 160 },
-  { title: '登录账号', key: 'username', width: 160 },
-  { title: '角色', key: 'role', width: 100 },
-  { title: '状态', key: 'active', width: 90 },
-  { title: '创建时间', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, fixed: 'right' as const },
-];
-
-const activeCount = computed(() => users.value.filter((user) => user.active).length);
+const columns = computed(() => {
+  void locale.value;
+  return [
+    { title: t('users.displayName'), key: 'displayName', width: 160 },
+    { title: t('users.username'), key: 'username', dataIndex: 'username', width: 160 },
+    { title: t('users.role'), key: 'role', width: 100 },
+    { title: t('users.createdAt'), key: 'createdAt', width: 180 },
+    { title: t('common.actions'), key: 'action', width: 200, fixed: 'right' as const },
+  ];
+});
 
 async function load() {
   loading.value = true;
   try {
-    users.value = await usersApi.list(includeInactive.value);
+    users.value = await usersApi.list();
   } catch (error) {
-    message.error(errorText(error, '加载成员失败'));
+    message.error(errorText(error, t('users.loadFailed')));
   } finally {
     loading.value = false;
   }
@@ -68,15 +69,15 @@ function openEdit(user: User) {
 async function submit() {
   if (!editing.value) {
     if (!form.username.trim() || !form.displayName.trim()) {
-      message.warning('请填写登录账号和姓名');
+      message.warning(t('users.needUsernameName'));
       return;
     }
     if (form.password.length < 6) {
-      message.warning('初始密码至少 6 位');
+      message.warning(t('users.passwordMin'));
       return;
     }
   } else if (!form.displayName.trim()) {
-    message.warning('请填写姓名');
+    message.warning(t('users.needName'));
     return;
   }
 
@@ -87,7 +88,7 @@ async function submit() {
         displayName: form.displayName.trim(),
         role: form.role,
       });
-      message.success('成员信息已更新');
+      message.success(t('users.updated'));
     } else {
       await usersApi.create({
         username: form.username.trim(),
@@ -95,24 +96,14 @@ async function submit() {
         role: form.role,
         password: form.password,
       });
-      message.success('成员已创建');
+      message.success(t('users.created'));
     }
     formOpen.value = false;
     await load();
   } catch (error) {
-    message.error(errorText(error, '保存失败'));
+    message.error(errorText(error, t('users.saveFailed')));
   } finally {
     saving.value = false;
-  }
-}
-
-async function toggleActive(user: User) {
-  try {
-    await usersApi.update(user.id, { active: !user.active });
-    message.success(user.active ? '已停用该账号' : '已启用该账号');
-    await load();
-  } catch (error) {
-    message.error(errorText(error, '操作失败'));
   }
 }
 
@@ -125,32 +116,32 @@ function openReset(user: User) {
 async function submitReset() {
   if (!resetTarget.value) return;
   if (resetPassword.value.length < 6) {
-    message.warning('新密码至少 6 位');
+    message.warning(t('auth.passwordMin'));
     return;
   }
   try {
     await usersApi.resetPassword(resetTarget.value.id, resetPassword.value);
-    message.success(`已重置 ${resetTarget.value.displayName} 的密码`);
+    message.success(t('users.resetSuccess', { name: resetTarget.value.displayName }));
     resetOpen.value = false;
   } catch (error) {
-    message.error(errorText(error, '重置失败'));
+    message.error(errorText(error, t('users.resetFailed')));
   }
 }
 
 function remove(user: User) {
   Modal.confirm({
-    title: `删除成员 ${user.displayName}？`,
-    content: '该成员名下任务的负责人会被清空，任务本身保留。',
-    okText: '删除',
+    title: t('users.deleteTitle', { name: user.displayName }),
+    content: t('users.deleteContent'),
+    okText: t('common.delete'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('common.cancel'),
     async onOk() {
       try {
         await usersApi.remove(user.id);
-        message.success('成员已删除');
+        message.success(t('users.deleted'));
         await load();
       } catch (error) {
-        message.error(errorText(error, '删除失败'));
+        message.error(errorText(error, t('users.deleteFailed')));
       }
     },
   });
@@ -163,20 +154,19 @@ onMounted(load);
   <div class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">成员管理</h2>
+        <h2 class="page-title">{{ t('nav.users') }}</h2>
         <p class="page-subtitle">
-          共 {{ users.length }} 个账号，其中 {{ activeCount }} 个启用中。成员可管理任务，管理员还能管理项目与成员。
+          {{ t('users.summary', { total: users.length }) }}
         </p>
       </div>
       <div class="toolbar">
-        <a-checkbox v-model:checked="includeInactive" @change="load">显示已停用</a-checkbox>
         <a-button @click="load">
           <ReloadOutlined />
-          刷新
+          {{ t('common.refresh') }}
         </a-button>
         <a-button type="primary" @click="openCreate">
           <PlusOutlined />
-          新增成员
+          {{ t('users.create') }}
         </a-button>
       </div>
     </div>
@@ -193,17 +183,17 @@ onMounted(load);
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'displayName'">
             <b>{{ record.displayName }}</b>
-            <a-tag v-if="record.id === auth.user?.id" color="blue" style="margin-left: 6px">我</a-tag>
+            <a-tag v-if="record.id === auth.user?.id" color="blue" style="margin-left: 6px">{{ t('users.me') }}</a-tag>
+          </template>
+
+          <template v-else-if="column.key === 'username'">
+            <span class="text-muted">{{ record.username }}</span>
           </template>
 
           <template v-else-if="column.key === 'role'">
             <a-tag :color="record.role === 'ADMIN' ? 'gold' : 'default'">
-              {{ record.role === 'ADMIN' ? '管理员' : '成员' }}
+              {{ record.role === 'ADMIN' ? t('role.ADMIN') : t('role.MEMBER') }}
             </a-tag>
-          </template>
-
-          <template v-else-if="column.key === 'active'">
-            <a-badge :status="record.active ? 'success' : 'default'" :text="record.active ? '启用' : '停用'" />
           </template>
 
           <template v-else-if="column.key === 'createdAt'">
@@ -212,17 +202,14 @@ onMounted(load);
 
           <template v-else-if="column.key === 'action'">
             <a-space size="small">
-              <a @click="openEdit(record)">编辑</a>
-              <a @click="openReset(record)">重置密码</a>
-              <a v-if="record.id !== auth.user?.id" @click="toggleActive(record)">
-                {{ record.active ? '停用' : '启用' }}
-              </a>
+              <a @click="openEdit(record)">{{ t('common.edit') }}</a>
+              <a @click="openReset(record)">{{ t('users.resetPassword') }}</a>
               <a
                 v-if="record.id !== auth.user?.id"
                 class="text-danger"
                 @click="remove(record)"
               >
-                删除
+                {{ t('common.delete') }}
               </a>
             </a-space>
           </template>
@@ -232,46 +219,46 @@ onMounted(load);
 
     <a-modal
       v-model:open="formOpen"
-      :title="editing ? '编辑成员' : '新增成员'"
+      :title="editing ? t('users.edit') : t('users.create')"
       :confirm-loading="saving"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="t('common.save')"
+      :cancel-text="t('common.cancel')"
       @ok="submit"
     >
       <a-form layout="vertical" style="margin-top: 8px">
-        <a-form-item label="登录账号" required>
+        <a-form-item :label="t('users.username')" required>
           <a-input
             v-model:value="form.username"
             :disabled="!!editing"
-            placeholder="英文/数字，登录用"
+            :placeholder="t('users.usernamePlaceholder')"
             :maxlength="50"
           />
         </a-form-item>
-        <a-form-item label="姓名" required>
-          <a-input v-model:value="form.displayName" placeholder="真实姓名，看板上显示这个" :maxlength="50" />
+        <a-form-item :label="t('users.displayName')" required>
+          <a-input v-model:value="form.displayName" :placeholder="t('users.namePlaceholder')" :maxlength="50" />
         </a-form-item>
-        <a-form-item label="角色">
+        <a-form-item :label="t('users.role')">
           <a-radio-group v-model:value="form.role" button-style="solid">
-            <a-radio-button value="MEMBER">成员</a-radio-button>
-            <a-radio-button value="ADMIN">管理员</a-radio-button>
+            <a-radio-button value="MEMBER">{{ t('role.MEMBER') }}</a-radio-button>
+            <a-radio-button value="ADMIN">{{ t('role.ADMIN') }}</a-radio-button>
           </a-radio-group>
-          <div class="text-muted hint">管理员可管理项目、成员和所有任务</div>
+          <div class="text-muted hint">{{ t('users.adminHint') }}</div>
         </a-form-item>
-        <a-form-item v-if="!editing" label="初始密码" required>
-          <a-input-password v-model:value="form.password" placeholder="至少 6 位，可让成员登录后自行修改" />
+        <a-form-item v-if="!editing" :label="t('users.initialPassword')" required>
+          <a-input-password v-model:value="form.password" :placeholder="t('users.passwordPlaceholder')" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <a-modal
       v-model:open="resetOpen"
-      :title="`重置 ${resetTarget?.displayName ?? ''} 的密码`"
-      ok-text="重置"
-      cancel-text="取消"
+      :title="t('users.resetTitle', { name: resetTarget?.displayName ?? '' })"
+      :ok-text="t('users.resetOk')"
+      :cancel-text="t('common.cancel')"
       @ok="submitReset"
     >
-      <a-alert type="warning" show-icon :closable="false" message="重置后请把新密码告知本人，建议其登录后立即修改" style="margin-bottom: 12px" />
-      <a-input-password v-model:value="resetPassword" placeholder="新密码，至少 6 位" />
+      <a-alert type="warning" show-icon :closable="false" :message="t('users.resetAlert')" style="margin-bottom: 12px" />
+      <a-input-password v-model:value="resetPassword" :placeholder="t('users.resetPlaceholder')" />
     </a-modal>
   </div>
 </template>

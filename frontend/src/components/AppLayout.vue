@@ -1,27 +1,31 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message, Modal } from 'ant-design-vue';
 import { HeartOutlined, LogoutOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { authApi } from '@/api';
 import { errorText } from '@/api/http';
+import { applyDocumentTitle } from '@/router';
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
+const { t, locale } = useI18n();
 
-/**
- * 导航直接在顶栏里，不再有左侧栏——
- * 首页是项目卡片墙，进到某个项目后再用项目内的页签切换看板/列表/统计。
- */
+watch(locale, () => {
+  applyDocumentTitle(route.meta.titleKey as string | undefined);
+});
+
 const navItems = computed(() => {
   const items: { key: string; label: string; to: string; icon?: unknown }[] = [
-    { key: 'home', label: '项目', to: '/' },
-    { key: 'my', label: '我的待办', to: '/my', icon: HeartOutlined },
+    { key: 'home', label: t('nav.projects'), to: '/' },
+    { key: 'my', label: t('nav.myTasks'), to: '/my', icon: HeartOutlined },
   ];
   if (auth.isAdmin) {
-    items.push({ key: 'users', label: '成员管理', to: '/users', icon: TeamOutlined });
+    items.push({ key: 'users', label: t('nav.users'), to: '/users', icon: TeamOutlined });
   }
   return items;
 });
@@ -38,9 +42,9 @@ const pwdLoading = ref(false);
 
 function logout() {
   Modal.confirm({
-    title: '确认退出登录？',
-    okText: '退出',
-    cancelText: '取消',
+    title: t('auth.logoutConfirm'),
+    okText: t('auth.logout'),
+    cancelText: t('common.cancel'),
     onOk() {
       auth.logout();
       router.push({ name: 'login' });
@@ -50,17 +54,17 @@ function logout() {
 
 async function submitPassword() {
   if (pwdForm.newPassword.length < 6) {
-    message.warning('新密码至少 6 位');
+    message.warning(t('auth.passwordMin'));
     return;
   }
   if (pwdForm.newPassword !== pwdForm.confirmPassword) {
-    message.warning('两次输入的新密码不一致');
+    message.warning(t('auth.passwordMismatch'));
     return;
   }
   pwdLoading.value = true;
   try {
     await authApi.changePassword(pwdForm.oldPassword, pwdForm.newPassword);
-    message.success('密码已修改，请用新密码重新登录');
+    message.success(t('auth.passwordChanged'));
     pwdOpen.value = false;
     pwdForm.oldPassword = '';
     pwdForm.newPassword = '';
@@ -68,7 +72,7 @@ async function submitPassword() {
     auth.logout();
     router.push({ name: 'login' });
   } catch (error) {
-    message.error(errorText(error, '修改密码失败'));
+    message.error(errorText(error, t('auth.changePasswordFailed')));
   } finally {
     pwdLoading.value = false;
   }
@@ -79,10 +83,9 @@ async function submitPassword() {
   <div class="app-shell">
     <header class="app-header">
       <div class="header-inner">
-        <!-- 点品牌名回首页（项目卡片墙），替代原来侧栏的「项目管理」入口 -->
         <router-link to="/" class="brand">
-          <span class="brand-mark">TK</span>
-          <span class="brand-text">任务看板</span>
+          <span class="brand-mark">{{ t('app.mark') }}</span>
+          <span class="brand-text">{{ t('app.name') }}</span>
         </router-link>
 
         <nav class="header-nav">
@@ -99,21 +102,22 @@ async function submitPassword() {
         </nav>
 
         <div class="header-right">
+          <LocaleSwitcher tone="light" />
           <a-dropdown>
             <a class="user-chip" @click.prevent>
               <UserOutlined />
               <span>{{ auth.user?.displayName }}</span>
               <a-tag :color="auth.isAdmin ? 'gold' : 'blue'" style="margin-left: 4px">
-                {{ auth.isAdmin ? '管理员' : '成员' }}
+                {{ auth.isAdmin ? t('role.ADMIN') : t('role.MEMBER') }}
               </a-tag>
             </a>
             <template #overlay>
               <a-menu>
-                <a-menu-item key="pwd" @click="pwdOpen = true">修改密码</a-menu-item>
+                <a-menu-item key="pwd" @click="pwdOpen = true">{{ t('auth.changePassword') }}</a-menu-item>
                 <a-menu-divider />
                 <a-menu-item key="logout" @click="logout">
                   <LogoutOutlined />
-                  <span style="margin-left: 6px">退出登录</span>
+                  <span style="margin-left: 6px">{{ t('auth.logout') }}</span>
                 </a-menu-item>
               </a-menu>
             </template>
@@ -129,21 +133,24 @@ async function submitPassword() {
 
   <a-modal
     v-model:open="pwdOpen"
-    title="修改密码"
+    :title="t('auth.changePassword')"
     :confirm-loading="pwdLoading"
-    ok-text="保存"
-    cancel-text="取消"
+    :ok-text="t('common.save')"
+    :cancel-text="t('common.cancel')"
     @ok="submitPassword"
   >
     <a-form layout="vertical">
-      <a-form-item label="原密码" required>
-        <a-input-password v-model:value="pwdForm.oldPassword" placeholder="请输入原密码" />
+      <a-form-item :label="t('auth.oldPassword')" required>
+        <a-input-password v-model:value="pwdForm.oldPassword" :placeholder="t('auth.oldPasswordPlaceholder')" />
       </a-form-item>
-      <a-form-item label="新密码" required>
-        <a-input-password v-model:value="pwdForm.newPassword" placeholder="至少 6 位" />
+      <a-form-item :label="t('auth.newPassword')" required>
+        <a-input-password v-model:value="pwdForm.newPassword" :placeholder="t('auth.newPasswordPlaceholder')" />
       </a-form-item>
-      <a-form-item label="确认新密码" required>
-        <a-input-password v-model:value="pwdForm.confirmPassword" placeholder="再次输入新密码" />
+      <a-form-item :label="t('auth.confirmPassword')" required>
+        <a-input-password
+          v-model:value="pwdForm.confirmPassword"
+          :placeholder="t('auth.confirmPasswordPlaceholder')"
+        />
       </a-form-item>
     </a-form>
   </a-modal>
@@ -200,7 +207,6 @@ async function submitPassword() {
   color: rgba(255, 255, 255, 0.94);
 }
 
-/* 顶栏导航：项目 / 我的待办 / 成员管理 */
 .header-nav {
   display: flex;
   align-items: center;
@@ -235,6 +241,9 @@ async function submitPassword() {
 .header-right {
   margin-left: auto;
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .user-chip {

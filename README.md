@@ -1,117 +1,156 @@
-# 任务看板
+# TaskBoard
 
-小而完整的**项目与任务进度看板**。看板拖拽流转任务，进度按任务自动汇总；带评论、操作日志、Excel 导入导出、统计图表和多人实时同步。前后端全 TypeScript，`docker compose` 一条命令部署。
+**Self-hosted project & task progress board for small teams.**
 
-## 功能
+[中文文档](README_ZH.md)
 
-| 模块 | 内容 |
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?style=flat-square&logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+
+[Quick start](#quick-start) · [Deploy](#deploy) · [Features](#key-features) · [API](http://localhost:3000/api/docs) · [Contributing](CONTRIBUTING.md)
+
+Drag cards across columns, roll up progress automatically, collaborate with comments and an activity log, and keep everyone in sync over Socket.IO — full TypeScript stack, one `docker compose` command to ship.
+
+---
+
+## Key features
+
+- **Kanban that tracks progress** — Four columns (To do / In progress / Blocked / Done), drag to change status, reorder within a column; move to Done sets progress to 100%.
+- **Projects with a clear overview** — Master–detail home: pick a project, preview summary and a mini board, then open board / list / stats.
+- **Tasks built for real work** — Assignee, multiple participants, priority, 0–100 progress, planned & actual date pair; table view with filters, sort, batch update, and “My tasks”.
+- **Collaboration without noise** — Comments plus an activity timeline (who changed what from → to).
+- **Live multi-user sync** — Socket.IO pushes board changes; others see updates without a manual refresh.
+- **Stats at a glance** — ECharts by status, priority, and assignee (counts & average progress).
+- **English & 简体中文** — Switcher on login and in the header; preference is persisted locally.
+- **Auth that fits small teams** — Username/password with `ADMIN` / `MEMBER` roles.
+
+---
+
+## Stack
+
+| Layer | Choice |
 | --- | --- |
-| 项目 | 卡片墙首页：渐变封面、任务数徽章、平均进度与完成率、开始→结束日期；末尾一键创建 |
-| 看板 | 四列拖拽改状态、列内排序、列自适应铺满、状态计数可点即筛 |
-| 任务 | 新建/编辑/删除、负责人、参与人（多选）、优先级、0-100 整数进度、计划与实际四个日期 |
-| 任务列表 | 表格视图、多条件筛选、排序、分页、行内改状态与负责人、批量修改 |
-| 协作 | 评论、操作日志时间线（谁把哪条任务从什么状态改成了什么状态） |
-| 统计 | ECharts：状态分布、优先级分布、各负责人任务数与平均进度 |
-| 导入导出 | Excel 批量导入（先预览校验再落库）、按项目导出 |
-| 实时同步 | Socket.IO 推送，别人改了看板自动刷新并提示是谁改的 |
-| 权限 | 账号密码登录，管理员 / 成员两种角色 |
+| Frontend | Vue 3 · Vite · TypeScript · Ant Design Vue · Pinia · ECharts · Socket.IO Client |
+| Backend | NestJS · Prisma · TypeScript · Passport JWT · Socket.IO |
+| Database | PostgreSQL 16 |
+| Deploy | Docker Compose (`nginx` + `api` + `postgres`) |
 
-## 技术栈
+---
 
-| 层 | 选型 |
-| --- | --- |
-| 前端 | Vue 3 · Vite · TypeScript · Ant Design Vue · Pinia · ECharts · Socket.IO Client |
-| 后端 | NestJS · Prisma · TypeScript · Passport JWT · Socket.IO |
-| 数据库 | PostgreSQL 16 |
-| 部署 | Docker Compose（nginx + api + postgres） |
+## Quick start
 
-## 快速开始
-
-需要 Node.js 20+ 与 Docker。
+Requires **Node.js 20+** and **Docker**.
 
 ```bash
-# 1. 准备环境变量
+# 1. Env
 cp .env.example .env
 
-# 2. 只起数据库（默认映射到宿主机 5432，被占用就改 .env 里的 POSTGRES_PORT）
+# 2. Database only (host port 5432 by default; change POSTGRES_PORT if busy)
 docker compose --env-file .env -f docker/docker-compose.dev.yml up -d
 
-# 3. 后端
+# 3. Backend
 cd backend
 npm install
-npx prisma migrate deploy     # 建表
-npx prisma db seed            # 创建初始管理员
-npm run start:dev             # http://localhost:3000/api，接口文档 /api/docs
+npx prisma migrate deploy     # schema
+npx prisma db seed            # bootstrap admin
+npm run start:dev             # http://localhost:3000/api · Swagger /api/docs
 
-# 4. 前端（另开一个终端）
+# 4. Frontend (another terminal)
 cd frontend
 npm install
 npm run dev                   # http://localhost:5173
 ```
 
-初始账号 `admin`，密码取自 `.env` 里的 `ADMIN_INITIAL_PASSWORD`（默认 `Admin@123456`），登录后请立即修改。
+| | |
+| --- | --- |
+| Admin user | `admin` |
+| Password | `ADMIN_INITIAL_PASSWORD` in `.env` (default `Admin@123456`) — **change after first login** |
 
-开发期前端通过 Vite 代理把 `/api` 与 `/socket.io` 转发到 `localhost:3000`，不用处理跨域。
+Vite proxies `/api` and `/socket.io` to `localhost:3000` in development (no CORS setup).
 
-## 部署到服务器
+### Demo data
+
+For local screenshots and walkthroughs:
+
+```bash
+cd backend && npm run db:seed:demo
+```
+
+Creates fictional project **Product Launch Demo** (members `alice` / `bob` / `carol`, tasks in all columns, comments & activities). Copy is stored in English; the UI remaps titles when you switch language. Demo password defaults to `Demo@123456` (`DEMO_USER_PASSWORD`). **Do not** run on production.
+
+---
+
+## Deploy
+
+Production in one compose stack:
 
 ```bash
 cp .env.example .env
-# 至少改掉这三项：
+# At minimum set:
 #   JWT_SECRET=$(openssl rand -hex 32)
-#   POSTGRES_PASSWORD=<强密码>
-#   ADMIN_INITIAL_PASSWORD=<初始管理员密码>
+#   POSTGRES_PASSWORD=<strong password>
+#   ADMIN_INITIAL_PASSWORD=<initial admin password>
 docker compose --env-file .env -f docker/docker-compose.yml up -d --build
-# 访问 http://<服务器IP>:8080
+# → http://<server-ip>:8080
 ```
 
-`api` 容器启动时会自动执行数据库迁移与初始管理员创建，两者都是幂等的，重启容器不会重复造数据。备份、恢复、排障见[部署与冒烟清单](docs/部署与冒烟清单.md)。
+The `api` container runs migrations and admin bootstrap on start (idempotent).
 
-## 文档
+API reference while the backend is running: Swagger at `http://localhost:3000/api/docs` (or your deployed host + `/api/docs`).
 
-- [设计决策](docs/设计决策.md) —— 产品层面的关键取舍与理由
-- [数据模型与接口](docs/数据模型与接口.md) —— 表结构、全部接口、进度算法
-- [部署与冒烟清单](docs/部署与冒烟清单.md) —— 本地开发、生产部署、手工验收清单、排障
+---
 
-## 测试
+## Tests
 
 ```bash
-cd backend && npm run test          # 单元测试：进度汇总 / 状态与进度联动 / 权限规则 / 导入校验
-cd frontend && npm run typecheck    # 前端类型检查
+cd backend && npm run test
+cd frontend && npm run typecheck
 
-# 接口冒烟（需后端已启动）
 python scripts/api-smoke.py
-python scripts/api-smoke.py --base http://localhost:8080/api   # 也可直接打生产 nginx
+python scripts/api-smoke.py --base http://localhost:8080/api
 
-# 实时通道冒烟（验证 WebSocket 能穿过 nginx，不会被降级成轮询）
 cd frontend && node scripts/ws-smoke.mjs http://localhost:8080
 ```
 
-## 目录结构
+---
+
+## Layout
 
 ```
 ├─ backend/            NestJS + Prisma
-│  ├─ prisma/          schema、migrations、seed
-│  └─ src/             auth users projects tasks comments activities stats task-io realtime common
+│  ├─ prisma/          schema, migrations, seed
+│  └─ src/             auth · users · projects · tasks · comments · activities · stats · realtime
 ├─ frontend/           Vue 3 + Vite + Ant Design Vue
-│  ├─ src/api          接口封装（axios 实例统一处理 401 与错误提示）
-│  ├─ src/views        登录、项目卡片墙（首页）、看板、任务列表、统计、我的待办、成员管理
-│  └─ src/components   看板卡片、任务表单、任务详情弹窗、筛选项、导入弹窗等
-├─ docker/
-│  ├─ docker-compose.yml       生产：nginx + api + postgres
-│  └─ docker-compose.dev.yml   开发：仅 postgres
-└─ scripts/api-smoke.py  接口级冒烟测试（仅用 Python 标准库）
+├─ docker/             prod & dev Compose files
+└─ scripts/            api-smoke.py · ws helpers
 ```
 
-## 两个容易踩的坑
+---
 
-1. **compose 不会自动读仓库根目录的 `.env`**。compose v2 的项目目录是 compose 文件所在目录（`docker/`），所以命令里必须带 `--env-file .env`，并且在仓库根目录执行。
-2. **Socket.IO 走 nginx 必须带 `Upgrade` 头**，否则会静默退化成轮询，看板上看起来「实时同步」没反应。`frontend/nginx.conf` 里已经配好，自建反代时记得抄这两行。
+## Notes
 
-## 参与贡献
+1. **Compose does not auto-load the repo-root `.env`.** Compose v2 uses the compose file’s directory (`docker/`) as the project dir — always pass `--env-file .env` from the repo root.
+2. **Socket.IO behind nginx needs `Upgrade` headers**, or it falls back to polling and sync looks broken. `frontend/nginx.conf` already sets this.
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+---
 
-## 许可证
+## Security
 
-[MIT](LICENSE)
+- Do not commit real secrets; use `.env` (gitignored) and keep placeholders in `.env.example`.
+- Report security issues privately to the maintainers when possible; avoid posting exploitable details in public issues.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and focused PRs are welcome.
+
+---
+
+## License
+
+[MIT](LICENSE) — free to use, modify, and self-host.

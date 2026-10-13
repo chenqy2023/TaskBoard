@@ -33,6 +33,7 @@ async function main() {
 
   console.log(`[seed] 已创建初始管理员：${admin.username}（姓名：${admin.displayName}）`);
   console.log('[seed] 请登录后立即修改密码。');
+  console.log('[seed] 需要 README 演示数据时再执行：npm run db:seed:demo');
 }
 
 main()

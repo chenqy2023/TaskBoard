@@ -1,12 +1,13 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { tGlobal } from '@/i18n';
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
-    meta: { public: true, title: '登录' },
+    meta: { public: true, titleKey: 'route.login' },
   },
   {
     path: '/',
@@ -17,37 +18,37 @@ const routes: RouteRecordRaw[] = [
         path: 'projects',
         name: 'projects',
         component: () => import('@/views/ProjectsView.vue'),
-        meta: { title: '项目管理' },
+        meta: { titleKey: 'route.projects' },
       },
       {
         path: 'projects/:id/board',
         name: 'board',
         component: () => import('@/views/BoardView.vue'),
-        meta: { title: '看板' },
+        meta: { titleKey: 'route.board' },
       },
       {
         path: 'projects/:id/tasks',
         name: 'task-list',
         component: () => import('@/views/TaskListView.vue'),
-        meta: { title: '任务列表' },
+        meta: { titleKey: 'route.taskList' },
       },
       {
         path: 'projects/:id/stats',
         name: 'stats',
         component: () => import('@/views/StatsView.vue'),
-        meta: { title: '统计' },
+        meta: { titleKey: 'route.stats' },
       },
       {
         path: 'my',
         name: 'my-tasks',
         component: () => import('@/views/MyTasksView.vue'),
-        meta: { title: '我的待办' },
+        meta: { titleKey: 'route.myTasks' },
       },
       {
         path: 'users',
         name: 'users',
         component: () => import('@/views/UsersView.vue'),
-        meta: { title: '成员管理', adminOnly: true },
+        meta: { titleKey: 'route.users', adminOnly: true },
       },
     ],
   },
@@ -59,6 +60,14 @@ export const router = createRouter({
   routes,
 });
 
+export function applyDocumentTitle(titleKey?: string) {
+  if (titleKey) {
+    document.title = tGlobal('app.titleSuffix', { title: tGlobal(titleKey) });
+  } else {
+    document.title = tGlobal('app.name');
+  }
+}
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
 
@@ -68,7 +77,6 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } };
   }
 
-  // 刷新页面后 store 是空的，先换回用户信息再判断权限
   if (!auth.user) {
     const user = await auth.fetchMe();
     if (!user) return { name: 'login', query: { redirect: to.fullPath } };
@@ -81,6 +89,5 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
-  const title = (to.meta.title as string | undefined) ?? '';
-  document.title = title ? `${title} · 任务看板` : '任务看板';
+  applyDocumentTitle(to.meta.titleKey as string | undefined);
 });

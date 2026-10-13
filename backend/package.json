@@ -1,8 +1,8 @@
 {
-  "name": "task-kanban-backend",
+  "name": "taskboard-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Task Kanban backend (NestJS + Prisma + PostgreSQL)",
+  "description": "TaskBoard backend (NestJS + Prisma + PostgreSQL)",
   "scripts": {
     "build": "nest build",
     "start": "nest start",
@@ -13,6 +13,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "db:seed": "node prisma/seed.js",
+    "db:seed:demo": "node prisma/seed-demo.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
@@ -32,7 +33,6 @@
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "exceljs": "^4.4.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prisma": "^6.5.0",
@@ -47,7 +47,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
-    "@types/multer": "^2.3.0",
     "@types/node": "^22.13.14",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.3",

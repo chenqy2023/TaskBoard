@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { CalendarOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import type { ProjectView } from '@/types';
-import { VERSION_STATUS_COLORS, VERSION_STATUS_LABELS } from '@/utils/labels';
+import { VERSION_STATUS_COLORS } from '@/utils/labels';
+import { localizeDemoText } from '@/utils/demo-content';
 
 const props = defineProps<{ project: ProjectView }>();
 const route = useRoute();
 const router = useRouter();
+const { t, locale } = useI18n();
 
 const activeKey = computed(() => {
   if (route.name === 'board') return 'board';
@@ -18,14 +21,18 @@ const activeKey = computed(() => {
 });
 
 function go(key: string) {
-  router.push({ name: key === 'board' ? 'board' : key === 'tasks' ? 'task-list' : 'stats', params: { id: props.project.id } });
+  router.push({
+    name: key === 'board' ? 'board' : key === 'tasks' ? 'task-list' : 'stats',
+    params: { id: props.project.id },
+  });
 }
 
 const dateRange = computed(() => {
+  void locale.value;
   const start = props.project.startDate;
   const end = props.project.endDate;
   if (!start && !end) return null;
-  const fmt = (value: string | null) => (value ? dayjs(value).format('YYYY-MM-DD') : '待定');
+  const fmt = (value: string | null) => (value ? dayjs(value).format('YYYY-MM-DD') : t('common.pending'));
   return `${fmt(start)} ~ ${fmt(end)}`;
 });
 </script>
@@ -33,11 +40,11 @@ const dateRange = computed(() => {
 <template>
   <div class="project-head">
     <div class="project-title">
-      <router-link to="/projects" class="back">全部项目</router-link>
+      <router-link to="/projects" class="back">{{ t('projectTabs.allProjects') }}</router-link>
       <a-divider type="vertical" />
-      <span class="name">{{ project.name }}</span>
+      <span class="name">{{ localizeDemoText(project.name) }}</span>
       <a-tag :color="VERSION_STATUS_COLORS[project.status]">
-        {{ VERSION_STATUS_LABELS[project.status] }}
+        {{ t(`labels.projectStatus.${project.status}`) }}
       </a-tag>
       <span v-if="dateRange" class="text-muted dates">
         <CalendarOutlined />
@@ -45,9 +52,9 @@ const dateRange = computed(() => {
       </span>
     </div>
     <a-tabs :active-key="activeKey" size="small" @change="(key: string | number) => go(String(key))">
-      <a-tab-pane key="board" tab="看板" />
-      <a-tab-pane key="tasks" tab="任务列表" />
-      <a-tab-pane key="stats" tab="统计" />
+      <a-tab-pane key="board" :tab="t('projectTabs.board')" />
+      <a-tab-pane key="tasks" :tab="t('projectTabs.tasks')" />
+      <a-tab-pane key="stats" :tab="t('projectTabs.stats')" />
     </a-tabs>
   </div>
 </template>

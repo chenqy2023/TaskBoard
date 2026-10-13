@@ -2,10 +2,7 @@ import { http } from './http';
 import type {
   ActivityView,
   CommentView,
-  ImportPreview,
   Paginated,
-  ParsedImportRow,
-  RawImportRow,
   TaskQuery,
   TaskStatus,
   TaskView,
@@ -27,13 +24,10 @@ export const authApi = {
 
 // ---------- 成员 ----------
 export const usersApi = {
-  list: (includeInactive = false) =>
-    http
-      .get<User[]>('/users', { params: { includeInactive } })
-      .then((r) => r.data),
+  list: () => http.get<User[]>('/users').then((r) => r.data),
   create: (payload: { username: string; displayName: string; role: string; password: string }) =>
     http.post<User>('/users', payload).then((r) => r.data),
-  update: (id: string, payload: { displayName?: string; role?: string; active?: boolean }) =>
+  update: (id: string, payload: { displayName?: string; role?: string }) =>
     http.patch<User>(`/users/${id}`, payload).then((r) => r.data),
   resetPassword: (id: string, newPassword: string) =>
     http.post(`/users/${id}/reset-password`, { newPassword }).then((r) => r.data),
@@ -87,34 +81,4 @@ export const commentsApi = {
 export const statsApi = {
   byProject: (projectId: string) =>
     http.get<ProjectStats>(`/stats/projects/${projectId}`).then((r) => r.data),
-};
-
-// ---------- 导入导出 ----------
-export const taskIoApi = {
-  exportUrl: (projectId: string) => `${import.meta.env.VITE_API_BASE || '/api'}/projects/${projectId}/export`,
-  async download(projectId: string, filename: string) {
-    const response = await http.get(`/projects/${projectId}/export`, { responseType: 'blob' });
-    const url = URL.createObjectURL(response.data as Blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  },
-  preview: (projectId: string, file: File) => {
-    const form = new FormData();
-    form.append('file', file);
-    return http
-      .post<ImportPreview>(`/projects/${projectId}/import/preview`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
-      })
-      .then((r) => r.data);
-  },
-  confirm: (projectId: string, rows: RawImportRow[] | ParsedImportRow[]) =>
-    http
-      .post<{ createdCount: number }>(`/projects/${projectId}/import/confirm`, { rows })
-      .then((r) => r.data),
 };

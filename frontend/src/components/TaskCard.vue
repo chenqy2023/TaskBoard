@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { CalendarOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
 import type { TaskView } from '@/types';
 import {
-  PRIORITY_LABELS,
   avatarColor,
   avatarInitial,
   priorityColor,
   progressColor,
 } from '@/utils/labels';
+import { localizeDemoText } from '@/utils/demo-content';
 
 const props = defineProps<{ task: TaskView }>();
+const { t } = useI18n();
 
 const emit = defineEmits<{
   (e: 'open', task: TaskView): void;
@@ -32,9 +34,9 @@ const isHot = computed(() => props.task.priority === 'P0' || props.task.priority
 </script>
 
 <template>
-  <div class="card" :style="{ borderLeftColor: priorityColor(task.priority) }" @click="emit('open', task)">
+  <div class="card" @click="emit('open', task)">
     <div class="card-top">
-      <span class="title" :class="{ done: task.status === 'DONE' }">{{ task.title }}</span>
+      <span class="title" :class="{ done: task.status === 'DONE' }">{{ localizeDemoText(task.title) }}</span>
       <span
         class="priority"
         :class="{ solid: isHot }"
@@ -44,7 +46,7 @@ const isHot = computed(() => props.task.priority === 'P0' || props.task.priority
           borderColor: priorityColor(task.priority),
         }"
       >
-        {{ PRIORITY_LABELS[task.priority] }}
+        {{ t(`labels.priority.${task.priority}`) }}
       </span>
     </div>
 
@@ -53,28 +55,28 @@ const isHot = computed(() => props.task.priority === 'P0' || props.task.priority
         v-if="dueLabel"
         class="due"
         :class="{ overdue: task.overdue }"
-        :title="`计划结束日期：${task.plannedEndDate}${task.overdue ? '（已逾期）' : ''}`"
+        :title="`${t('labels.dateField.plannedEndDate')}: ${task.plannedEndDate}${task.overdue ? ` (${t('task.overdue')})` : ''}`"
       >
         <CalendarOutlined />
         {{ dueLabel }}
       </span>
-      <span v-else class="due muted">未排期</span>
+      <span v-else class="due muted">{{ t('task.noSchedule') }}</span>
 
       <div class="members">
-        <span v-if="assignee" class="who" :title="`负责人：${assignee.displayName}`">
+        <span v-if="assignee" class="who" :title="t('task.assigneeOf', { name: assignee.displayName })">
           <span class="avatar" :style="{ background: avatarColor(assignee.displayName) }">
             {{ avatarInitial(assignee.displayName) }}
           </span>
           <span class="who-name">{{ assignee.displayName }}</span>
         </span>
-        <span v-else class="who muted" title="未分配负责人">未分配</span>
+        <span v-else class="who muted" :title="t('task.unassignedAssignee')">{{ t('common.unassigned') }}</span>
 
         <span
           v-for="person in task.participants"
           :key="person.id"
           class="avatar avatar-sm"
           :style="{ background: avatarColor(person.displayName) }"
-          :title="`参与：${person.displayName}`"
+          :title="t('task.participantOf', { name: person.displayName })"
         >
           {{ avatarInitial(person.displayName) }}
         </span>
@@ -97,8 +99,6 @@ const isHot = computed(() => props.task.priority === 'P0' || props.task.priority
 .card {
   background: #fff;
   border: 1px solid var(--tk-hairline);
-  /* 左侧色条跟随优先级，是快速扫视时最直接的线索 */
-  border-left: 3px solid var(--tk-ink-4);
   border-radius: var(--tk-radius-sm);
   box-shadow: var(--tk-shadow-card);
   padding: 10px 12px 8px;

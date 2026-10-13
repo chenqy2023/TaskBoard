@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import dayjs from 'dayjs';
@@ -8,20 +9,20 @@ import type { Priority, TaskStatus, TaskView, User } from '@/types';
 import { tasksApi, usersApi } from '@/api';
 import { errorText } from '@/api/http';
 import {
-  PRIORITY_LABELS,
   SEMANTIC,
   TASK_STATUS_BAR_COLORS,
   TASK_STATUS_COLORS,
-  TASK_STATUS_LABELS,
   priorityColor,
   progressColor,
 } from '@/utils/labels';
+import { localizeDemoText } from '@/utils/demo-content';
 import TaskDetailModal from '@/components/TaskDetailModal.vue';
 import TaskFormModal from '@/components/TaskFormModal.vue';
 
 const router = useRouter();
 const tasks = ref<TaskView[]>([]);
 const users = ref<User[]>([]);
+const { t, locale } = useI18n();
 const loading = ref(false);
 const detailOpen = ref(false);
 const detailTask = ref<TaskView | null>(null);
@@ -29,6 +30,7 @@ const formOpen = ref(false);
 const editingTask = ref<TaskView | null>(null);
 
 const groups = computed(() => {
+  void locale.value;
   const today = dayjs().format('YYYY-MM-DD');
   const overdue: TaskView[] = [];
   const soon: TaskView[] = [];
@@ -48,10 +50,10 @@ const groups = computed(() => {
   }
 
   return [
-    { key: 'overdue', title: '已逾期', color: SEMANTIC.danger, tasks: overdue },
-    { key: 'soon', title: '3 天内到期', color: SEMANTIC.warn, tasks: soon },
-    { key: 'normal', title: '进行中', color: SEMANTIC.brand, tasks: normal },
-    { key: 'noDue', title: '未设计划结束日期', color: TASK_STATUS_BAR_COLORS.TODO, tasks: noDue },
+    { key: 'overdue', title: t('myTasks.groupOverdue'), color: SEMANTIC.danger, tasks: overdue },
+    { key: 'soon', title: t('myTasks.groupSoon'), color: SEMANTIC.warn, tasks: soon },
+    { key: 'normal', title: t('myTasks.groupNormal'), color: SEMANTIC.brand, tasks: normal },
+    { key: 'noDue', title: t('myTasks.groupNoDue'), color: TASK_STATUS_BAR_COLORS.TODO, tasks: noDue },
   ].filter((group) => group.tasks.length > 0);
 });
 
@@ -62,7 +64,7 @@ async function load() {
     tasks.value = list;
     users.value = userList;
   } catch (error) {
-    message.error(errorText(error, '加载我的待办失败'));
+    message.error(errorText(error, t('myTasks.loadFailed')));
   } finally {
     loading.value = false;
   }
@@ -84,17 +86,17 @@ onMounted(load);
   <div class="page">
     <div class="page-header">
       <div>
-        <h2 class="page-title">我的待办</h2>
-        <p class="page-subtitle">我负责或我参与的未完成任务，按计划结束日期排序</p>
+        <h2 class="page-title">{{ t('nav.myTasks') }}</h2>
+        <p class="page-subtitle">{{ t('myTasks.subtitle') }}</p>
       </div>
       <a-button :loading="loading" @click="load">
         <ReloadOutlined />
-        刷新
+        {{ t('common.refresh') }}
       </a-button>
     </div>
 
     <a-spin :spinning="loading">
-      <a-empty v-if="tasks.length === 0" description="太好了，当前没有待办任务" />
+      <a-empty v-if="tasks.length === 0" :description="t('myTasks.empty')" />
 
       <a-card v-for="group in groups" :key="group.key" size="small" style="margin-bottom: 12px">
         <template #title>
@@ -108,27 +110,27 @@ onMounted(load);
             <a-list-item>
               <a-list-item-meta>
                 <template #title>
-                  <a @click="openDetail(item)">{{ item.title }}</a>
+                  <a @click="openDetail(item)">{{ localizeDemoText(item.title) }}</a>
                   <a-tag v-if="item.project" style="margin-left: 8px" @click="openProject(item)">
-                    {{ item.project.name }}
+                    {{ localizeDemoText(item.project.name) }}
                   </a-tag>
                 </template>
                 <template #description>
                   <span class="text-muted">
                     <a-tag :color="item.isAssignee ? 'blue' : 'default'" style="margin-right: 6px">
-                      {{ item.isAssignee ? '我负责' : '我参与' }}
+                      {{ item.isAssignee ? t('myTasks.asAssignee') : t('myTasks.asParticipant') }}
                     </a-tag>
-                    计划结束 {{ item.plannedEndDate ?? '未设置' }}
+                    {{ t('myTasks.plannedEnd', { date: item.plannedEndDate ?? t('myTasks.unset') }) }}
                   </span>
                 </template>
               </a-list-item-meta>
 
               <template #actions>
                 <a-tag :color="TASK_STATUS_COLORS[item.status as TaskStatus]">
-                  {{ TASK_STATUS_LABELS[item.status as TaskStatus] }}
+                  {{ t(`labels.taskStatus.${item.status}`) }}
                 </a-tag>
                 <span :style="{ color: priorityColor(item.priority as Priority), fontWeight: 600 }">
-                  {{ PRIORITY_LABELS[item.priority as Priority] }}
+                  {{ t(`labels.priority.${item.priority}`) }}
                 </span>
                 <div class="mini-progress">
                   <a-progress

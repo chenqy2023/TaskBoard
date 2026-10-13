@@ -2,6 +2,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { io, type Socket } from 'socket.io-client';
 import { message } from 'ant-design-vue';
 import { TOKEN_KEY } from '@/api/http';
+import { tGlobal } from '@/i18n';
 
 export interface RealtimeEvent {
   event: string;
@@ -77,15 +78,9 @@ export function useRealtime(projectId: () => string | undefined, onRefresh: (eve
 /** 实时事件里带的操作人，用来提示「谁改了什么」 */
 export function notifyRemoteChange(event: RealtimeEvent) {
   const by = event.payload?.by as string | undefined;
-  const map: Record<string, string> = {
-    'task.created': '新建了任务',
-    'task.updated': '修改了任务',
-    'task.moved': '调整了任务状态',
-    'task.deleted': '删除了任务',
-    'task.batch-updated': '批量更新了任务',
-    'comment.created': '发表了评论',
-    'comment.deleted': '删除了评论',
-  };
-  const action = map[event.event];
-  if (by && action) message.info(`${by} ${action}，看板已刷新`, 2);
+  const key = `realtime.${event.event}`;
+  const action = tGlobal(key);
+  if (by && action && action !== key) {
+    message.info(tGlobal('realtime.refreshed', { by, action }), 2);
+  }
 }

@@ -30,7 +30,8 @@ __pycache__/
 Thumbs.db
 
 # 编码助手的工作区状态，不进仓库
-.zcode/
+.cursor/
+
 
 # local data (uploads / pg dumps / exports)
 data/

@@ -11,22 +11,22 @@
 #
 # 显式指定项目名与卷名：compose 默认拿父目录名当项目名，
 # 同一个仓库里多个 docker/ 目录时会互相顶掉容器。
-name: task-kanban
+name: taskboard
 
 services:
   db:
     image: ${IMAGE_POSTGRES:-postgres:16-alpine}
-    container_name: task-kanban-db
+    container_name: taskboard-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kanban}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-task_kanban}
+      POSTGRES_DB: ${POSTGRES_DB:-taskboard}
       TZ: Asia/Shanghai
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-task_kanban}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-taskboard}"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -37,11 +37,11 @@ services:
   api:
     build:
       context: ../backend
-    image: task-kanban-api:${IMAGE_TAG:-latest}
-    container_name: task-kanban-api
+    image: taskboard-api:${IMAGE_TAG:-latest}
+    container_name: taskboard-api
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-kanban}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-task_kanban}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kanban}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-taskboard}
       JWT_SECRET: ${JWT_SECRET:?请在 .env 中设置 JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       PORT: 3000
@@ -69,8 +69,8 @@ services:
   web:
     build:
       context: ../frontend
-    image: task-kanban-web:${IMAGE_TAG:-latest}
-    container_name: task-kanban-web
+    image: taskboard-web:${IMAGE_TAG:-latest}
+    container_name: taskboard-web
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-8080}:80"
@@ -84,7 +84,7 @@ volumes:
   # 固定卷名，不随 compose 项目名变化，避免重建时数据"消失"。
   # 想在同一台机器上再起一套（例如灰度环境）时，用 PG_VOLUME_NAME 错开即可。
   pg_data:
-    name: ${PG_VOLUME_NAME:-task_kanban_pg_data}
+    name: ${PG_VOLUME_NAME:-taskboard_pg_data}
 
 networks:
   internal:

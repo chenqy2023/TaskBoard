@@ -6,24 +6,24 @@
 #
 # 注意：显式指定项目名与卷名，避免与 E:\projects 下其他项目的 docker/ 目录
 # （compose 默认项目名取父目录名 "docker"）互相顶掉容器。
-name: task-kanban
+name: taskboard
 
 services:
   db:
     image: ${IMAGE_POSTGRES:-postgres:16-alpine}
-    container_name: task-kanban-db
+    container_name: taskboard-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kanban}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kanban_dev_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-task_kanban}
+      POSTGRES_DB: ${POSTGRES_DB:-taskboard}
       TZ: Asia/Shanghai
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-task_kanban}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban} -d ${POSTGRES_DB:-taskboard}"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -31,4 +31,4 @@ services:
 volumes:
   # 固定卷名，不随 compose 项目名变化，避免重建时数据"消失"
   pg_data:
-    name: task_kanban_pg_data
+    name: taskboard_pg_data
