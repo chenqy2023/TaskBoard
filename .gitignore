@@ -17,6 +17,7 @@ coverage/
 *.log
 npm-debug.log*
 .tmp-*
+.tmp-demo-pass.txt
 
 # python 缓存（scripts 下的冒烟脚本）
 __pycache__/

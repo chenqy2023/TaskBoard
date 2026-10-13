@@ -11,9 +11,17 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-[快速开始](#快速开始) · [部署](#部署到服务器) · [功能](#核心能力) · [API](http://localhost:3000/api/docs) · [贡献](CONTRIBUTING.md)
+[界面预览](#界面预览) · [快速开始](#快速开始) · [部署](#部署到服务器) · [功能](#核心能力) · [API](http://localhost:3000/api/docs) · [贡献](CONTRIBUTING.md)
 
 看板拖拽流转任务、进度自动汇总，支持评论与操作日志、统计图表，以及多人 Socket.IO 实时同步。前后端全 TypeScript，一条 `docker compose` 即可部署。
+
+---
+
+## 界面预览
+
+| 项目墙 | 看板 |
+| --- | --- |
+| <img src="docs/screenshots/02-projects.png" alt="项目墙" width="420" /> | <img src="docs/screenshots/03-board.png" alt="看板" width="420" /> |
 
 ---
 
@@ -80,7 +88,7 @@ npm run dev                   # http://localhost:5173
 cd backend && npm run db:seed:demo
 ```
 
-幂等创建虚构项目 **Product Launch Demo**（成员 `alice` / `bob` / `carol`、四列任务、评论与日志）。库内为英文；切换界面语言时标题/描述自动映射。演示密码默认 `Demo@123456`（`DEMO_USER_PASSWORD`）。**生产勿执行。**
+幂等创建 5 个风格不同的虚构项目（产品发布 / 官网改版 / 移动 Sprint / 基础设施 / 客户开通；成员 `alice` / `bob` / `carol`、四列任务、评论与日志）。库内为英文；切换界面语言时标题/描述自动映射。演示密码默认 `Demo@123456`（`DEMO_USER_PASSWORD`）。**生产勿执行。**
 
 ---
 

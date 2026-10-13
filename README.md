@@ -11,9 +11,17 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-[Quick start](#quick-start) · [Deploy](#deploy) · [Features](#key-features) · [API](http://localhost:3000/api/docs) · [Contributing](CONTRIBUTING.md)
+[Screenshots](#screenshots) · [Quick start](#quick-start) · [Deploy](#deploy) · [Features](#key-features) · [API](http://localhost:3000/api/docs) · [Contributing](CONTRIBUTING.md)
 
 Drag cards across columns, roll up progress automatically, collaborate with comments and an activity log, and keep everyone in sync over Socket.IO — full TypeScript stack, one `docker compose` command to ship.
+
+---
+
+## Screenshots
+
+| Projects | Board |
+| --- | --- |
+| <img src="docs/screenshots/02-projects.png" alt="Projects" width="420" /> | <img src="docs/screenshots/03-board.png" alt="Kanban board" width="420" /> |
 
 ---
 
@@ -80,7 +88,7 @@ For local screenshots and walkthroughs:
 cd backend && npm run db:seed:demo
 ```
 
-Creates fictional project **Product Launch Demo** (members `alice` / `bob` / `carol`, tasks in all columns, comments & activities). Copy is stored in English; the UI remaps titles when you switch language. Demo password defaults to `Demo@123456` (`DEMO_USER_PASSWORD`). **Do not** run on production.
+Creates five themed fictional projects (Product Launch / Website Redesign / Mobile Sprint / Infra Reliability / Customer Onboarding; members `alice` / `bob` / `carol`, tasks in all columns, comments & activities). Copy is stored in English; the UI remaps titles when you switch language. Demo password defaults to `Demo@123456` (`DEMO_USER_PASSWORD`). **Do not** run on production.
 
 ---
 

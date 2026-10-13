@@ -384,5 +384,177 @@ export default {
         description: '用户可见变更、已知问题、回滚步骤。',
       },
     },
+    website: {
+      project: {
+        name: '官网改版',
+        description: '营销站焕新：品牌、信息架构与上线内容。偏设计向的演示项目。',
+      },
+      tasks: {
+        moodboard: {
+          title: '品牌情绪板与色彩 Token',
+          description: '敲定主色 / 强调色 / 中性色与字体搭配。',
+          comment: 'Token 已入库设计系统，简报里有 Figma 链接。',
+        },
+        ia: {
+          title: '信息架构线框',
+          description: '首页、产品、定价、文档导航；标注移动端断点。',
+        },
+        hero: {
+          title: '首屏与落地页高保真',
+          description: '通栏 Hero、一条标题、一组 CTA，避免卡片堆叠。',
+          comment: '桌面稿已定，正在打磨滚动联动品牌动效。',
+        },
+        cms: {
+          title: 'CMS 内容迁移清单',
+          description: '旧页面映射到新模板，标出失效嵌入与重定向。',
+        },
+        photo: {
+          title: '产品摄影拍摄简报',
+          description: '镜头清单、布光说明与上线素材使用授权。',
+        },
+        legal: {
+          title: '等待法务文案审核',
+          description: '隐私 / 条款页脚文案卡在法务反馈。',
+          comment: '已催办，目标周五前。',
+        },
+        seo: {
+          title: 'SEO Meta 与 Open Graph',
+          description: '各语言标题描述模板与社交预览图。',
+        },
+        cutover: {
+          title: '上线日切换手册',
+          description: 'DNS、CDN 清缓存、回滚地址与值班联系人。',
+        },
+      },
+    },
+    mobile: {
+      project: {
+        name: '移动端 Sprint 14',
+        description: '移动 App 两周研发冲刺。已完成列较满，任务偏用户故事风格。',
+      },
+      tasks: {
+        deeplink: {
+          title: '推送深链跳转修复',
+          description: '冷启动从通知必须落到正确任务详情。',
+          comment: '已合入；iOS / Android QA 通过。',
+        },
+        offline: {
+          title: '离线草稿同步队列',
+          description: '指数退避重试；服务端胜出时提示冲突。',
+        },
+        biometric: {
+          title: '生物识别解锁恢复会话',
+          description: '从安全存储恢复 JWT 前先过 Face ID / 指纹。',
+        },
+        virtualize: {
+          title: '看板列虚拟滚动',
+          description: '中端 Android 上 200+ 卡片仍保持 60fps。',
+          comment: 'RecyclerView 路径完成，接着量 Flutter 列表。',
+        },
+        dark: {
+          title: '深色模式对比度审计',
+          description: '深色主题下优先级芯片与状态徽章达到 WCAG AA。',
+        },
+        crash: {
+          title: '空看板 Crashlytics 尖峰',
+          description: '项目零任务时 NPE；等待 1.14.2 符号化堆栈。',
+          comment: '需要 CI 产出的 dSYM 才能定位。',
+        },
+        demo: {
+          title: 'Sprint 演示脚本',
+          description: '五分钟演示：深链、离线草稿、生物识别解锁。',
+        },
+        rc: {
+          title: 'TestFlight RC 冒烟',
+          description: '安装 RC、登录、建任务、杀进程、恢复会话。',
+        },
+      },
+    },
+    infra: {
+      project: {
+        name: '基础设施可靠性',
+        description: 'SRE / 值班风格看板：故障、容量与平台加固。P0 与阻塞偏多。',
+      },
+      tasks: {
+        pool: {
+          title: 'Postgres 连接池调优',
+          description: '审慎提高最大连接，并加上 PgBouncer 指标看板。',
+          comment: '上线后 p95 等待从 80ms 降到 12ms。',
+        },
+        alert: {
+          title: 'API 延迟告警手册',
+          description: '/api p99 > 500ms 持续 5 分钟的 PagerDuty 处置流程。',
+        },
+        disk: {
+          title: '预发卷磁盘告警',
+          description: '用量 92%；扩容工单卡在云配额审批。',
+          comment: '配额申请已提，ETA 未知。',
+        },
+        redis: {
+          title: 'Redis 故障切换演练',
+          description: '上次演练后预发 Sentinel 待重建，当前阻塞。',
+        },
+        bluegreen: {
+          title: '蓝绿发布干跑',
+          description: '切换流量且 WebSocket 会话零丢弃。',
+          comment: '金丝雀 10%，观察重连尖峰。',
+        },
+        backup: {
+          title: '备份恢复校验',
+          description: '把昨日 dump 恢复到隔离实例并校验表校验和。',
+        },
+        tls: {
+          title: 'TLS 套件清理',
+          description: '去掉遗留 CBC 套件，并记录旧 Android WebView 影响。',
+        },
+        cost: {
+          title: '成本复查：空闲预览环境',
+          description: 'PR 预览 48 小时空闲自动休眠，估算月省费用。',
+        },
+      },
+    },
+    onboarding: {
+      project: {
+        name: '客户开通手册',
+        description: '新客户上线流程手册。清单式任务，偏顺序推进。',
+      },
+      tasks: {
+        questionnaire: {
+          title: '收到启动问卷',
+          description: '组织规模、SSO、数据驻留与上线日已采集。',
+          comment: '字段齐全；SSO = SAML。',
+        },
+        provision: {
+          title: '开通租户与管理员席位',
+          description: '创建工作区、预置角色、邀请客户管理员。',
+        },
+        sso: {
+          title: 'SAML SSO 配置工作坊',
+          description: '元数据交换、属性映射，并用 IdP 测登录。',
+        },
+        template: {
+          title: '导入示例项目模板',
+          description: '装入客户可克隆的启动看板。',
+          comment: '三套模板已导两套，等他们确认列名。',
+        },
+        training: {
+          title: '管理员培训场次',
+          description: '90 分钟直播：用户、项目、权限、审计日志。',
+        },
+        logo: {
+          title: '等待客户 Logo 素材',
+          description: '白标页眉需要 SVG + PNG，素材未到无法上品牌。',
+          comment: '已催品牌对接两次，仍无文件。',
+        },
+        golive: {
+          title: '上线清单双方签字',
+          description: 'SSO、备份、支持渠道与成功标准双方确认。',
+        },
+        review: {
+          title: '预约 30 天成功回顾',
+          description: '日历占位 + 议程：采用指标与未闭环风险。',
+        },
+      },
+    },
   },
 } as const;

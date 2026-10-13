@@ -386,5 +386,181 @@ export default {
         description: 'User-facing changes, known issues, and rollback steps.',
       },
     },
+    website: {
+      project: {
+        name: 'Website Redesign',
+        description:
+          'Marketing site refresh: brand, IA, and launch content. Design-heavy demo with creative tasks.',
+      },
+      tasks: {
+        moodboard: {
+          title: 'Brand moodboard & color tokens',
+          description: 'Lock primary / accent / neutral tokens and type pairing for the new site.',
+          comment: 'Tokens checked into the design system; Figma link in the brief.',
+        },
+        ia: {
+          title: 'Information architecture wireframes',
+          description: 'Home, product, pricing, and docs nav; mobile breakpoints annotated.',
+        },
+        hero: {
+          title: 'Hero & landing page high-fidelity',
+          description: 'Full-bleed hero, one headline, single CTA group — no card clutter.',
+          comment: 'Desktop locked; polishing motion for the scroll-linked brand mark.',
+        },
+        cms: {
+          title: 'CMS content migration checklist',
+          description: 'Map old pages to new templates; flag broken embeds and redirects.',
+        },
+        photo: {
+          title: 'Photography brief for product shots',
+          description: 'Shot list, lighting notes, and usage rights for launch assets.',
+        },
+        legal: {
+          title: 'Awaiting legal copy review',
+          description: 'Privacy / terms footer wording blocked on counsel feedback.',
+          comment: 'Sent reminder; target Friday.',
+        },
+        seo: {
+          title: 'SEO meta & Open Graph pass',
+          description: 'Title/description templates and social preview images per locale.',
+        },
+        cutover: {
+          title: 'Launch day cutover runbook',
+          description: 'DNS, CDN cache purge, rollback URL, and on-call contacts.',
+        },
+      },
+    },
+    mobile: {
+      project: {
+        name: 'Mobile Sprint 14',
+        description:
+          'Two-week engineering sprint for the mobile app. Dense Done column, story-style tasks.',
+      },
+      tasks: {
+        deeplink: {
+          title: 'Push notification deep-link fix',
+          description: 'Cold-start from notification must land on the correct task detail.',
+          comment: 'Merged; QA signed off on iOS + Android.',
+        },
+        offline: {
+          title: 'Offline draft sync queue',
+          description: 'Retry with exponential backoff; surface conflict when server wins.',
+        },
+        biometric: {
+          title: 'Biometric unlock for session restore',
+          description: 'Face ID / fingerprint gate before restoring the JWT from secure storage.',
+        },
+        virtualize: {
+          title: 'Board column virtualization',
+          description: 'Keep 60fps while scrolling 200+ cards on mid-tier Android.',
+          comment: 'RecyclerView path done; measuring Flutter list next.',
+        },
+        dark: {
+          title: 'Dark mode contrast audit',
+          description: 'WCAG AA on priority chips and status badges in dark theme.',
+        },
+        crash: {
+          title: 'Crashlytics spike on empty board',
+          description: 'NPE when project has zero tasks; waiting on symbolicated stack from 1.14.2.',
+          comment: 'Need the dSYM from CI before we can pinpoint.',
+        },
+        demo: {
+          title: 'Sprint demo script',
+          description: 'Five-minute walkthrough: deep link, offline draft, biometric unlock.',
+        },
+        rc: {
+          title: 'Release candidate smoke on TestFlight',
+          description: 'Install RC, login, create task, kill app, restore session.',
+        },
+      },
+    },
+    infra: {
+      project: {
+        name: 'Infra Reliability',
+        description:
+          'SRE / on-call style board: incidents, capacity, and platform hardening. Heavy on P0 and Blocked.',
+      },
+      tasks: {
+        pool: {
+          title: 'Postgres connection pool tuning',
+          description: 'Raise max connections carefully; add PgBouncer metrics dashboard.',
+          comment: 'p95 wait dropped from 80ms to 12ms after roll-out.',
+        },
+        alert: {
+          title: 'API latency alert playbook',
+          description: 'PagerDuty runbook for /api p99 > 500ms lasting 5 minutes.',
+        },
+        disk: {
+          title: 'Disk pressure on staging volume',
+          description: 'Volume at 92%; resize ticket pending cloud quota approval.',
+          comment: 'Quota request submitted; ETA unknown.',
+        },
+        redis: {
+          title: 'Redis failover drill',
+          description: 'Blocked until staging Redis Sentinel is rebuilt after last drill.',
+        },
+        bluegreen: {
+          title: 'Blue/green deploy dry-run',
+          description: 'Flip traffic with zero dropped WebSocket sessions.',
+          comment: 'Canary at 10%; watching reconnect spikes.',
+        },
+        backup: {
+          title: 'Backup restore verification',
+          description: 'Restore yesterday’s dump into isolated instance; checksum tables.',
+        },
+        tls: {
+          title: 'TLS cipher suite cleanup',
+          description: 'Drop legacy CBC suites; document client impact for old Android WebView.',
+        },
+        cost: {
+          title: 'Cost review: idle preview environments',
+          description: 'Auto-sleep PR previews after 48h idle; estimate monthly savings.',
+        },
+      },
+    },
+    onboarding: {
+      project: {
+        name: 'Customer Onboarding',
+        description:
+          'Process playbook for bringing a new customer live. Checklist-style tasks, mostly sequential.',
+      },
+      tasks: {
+        questionnaire: {
+          title: 'Kickoff questionnaire received',
+          description: 'Org size, SSO needs, data residency, and go-live date captured.',
+          comment: 'All fields complete; SSO = SAML.',
+        },
+        provision: {
+          title: 'Provision tenant & admin seats',
+          description: 'Create workspace, seed roles, invite customer admins.',
+        },
+        sso: {
+          title: 'SAML SSO configuration workshop',
+          description: 'Metadata exchange, attribute mapping, and test login with IdP.',
+        },
+        template: {
+          title: 'Import sample project template',
+          description: 'Load starter boards the customer can clone for their teams.',
+          comment: 'Two of three templates imported; waiting on their column names.',
+        },
+        training: {
+          title: 'Admin training session',
+          description: '90-minute live session: users, projects, permissions, audit log.',
+        },
+        logo: {
+          title: 'Waiting on customer logo assets',
+          description: 'Need SVG + PNG for white-label header before branding can ship.',
+          comment: 'Pinged brand contact twice; still no files.',
+        },
+        golive: {
+          title: 'Go-live checklist sign-off',
+          description: 'SSO, backups, support channel, and success criteria signed by both sides.',
+        },
+        review: {
+          title: '30-day success review scheduled',
+          description: 'Calendar hold + agenda: adoption metrics and open risks.',
+        },
+      },
+    },
   },
 } as const;
