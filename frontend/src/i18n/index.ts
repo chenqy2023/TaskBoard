@@ -33,6 +33,13 @@ export const i18n = createI18n({
   },
 });
 
+/** 由 router 注册：语言切换后按当前路由刷新 document.title */
+let refreshDocumentTitle: (() => void) | null = null;
+
+export function registerDocumentTitleRefresh(fn: () => void) {
+  refreshDocumentTitle = fn;
+}
+
 export function setAppLocale(locale: AppLocale) {
   i18n.global.locale.value = locale;
   try {
@@ -43,10 +50,15 @@ export function setAppLocale(locale: AppLocale) {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = locale === 'zh-CN' ? 'zh-CN' : 'en';
   }
+  refreshDocumentTitle?.();
 }
 
 export function tGlobal(key: string, params?: Record<string, unknown>) {
-  return i18n.global.t(key, params as never) as string;
+  // vue-i18n 11：命名插值必须用 t(key, named)，勿把 locale 放在第二参
+  if (params) {
+    return i18n.global.t(key, params as never) as string;
+  }
+  return i18n.global.t(key) as string;
 }
 
 /** 启动时同步 <html lang> */

@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { tGlobal } from '@/i18n';
+import { registerDocumentTitleRefresh, tGlobal } from '@/i18n';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -67,6 +67,10 @@ export function applyDocumentTitle(titleKey?: string) {
     document.title = tGlobal('app.name');
   }
 }
+
+registerDocumentTitleRefresh(() => {
+  applyDocumentTitle(router.currentRoute.value.meta.titleKey as string | undefined);
+});
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
